@@ -1,0 +1,36 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="200" height="200" fill="#f8fafc" rx="20"/>
+  
+  <!-- Outer gear -->
+  <circle cx="100" cy="100" r="85" fill="#1e40af" stroke="#1e3a8a" stroke-width="6"/>
+  
+  <!-- Gear teeth -->
+  <g fill="#1e3a8a">
+    <rect x="95" y="5" width="10" height="25" rx="5"/>
+    <rect x="95" y="170" width="10" height="25" rx="5"/>
+    <rect x="5" y="95" width="25" height="10" rx="5"/>
+    <rect x="170" y="95" width="25" height="10" rx="5"/>
+    <rect x="20" y="20" width="18" height="10" rx="5" transform="rotate(45 29 25)"/>
+    <rect x="162" y="20" width="18" height="10" rx="5" transform="rotate(135 171 25)"/>
+    <rect x="20" y="170" width="18" height="10" rx="5" transform="rotate(-45 29 175)"/>
+    <rect x="162" y="170" width="18" height="10" rx="5" transform="rotate(-135 171 175)"/>
+  </g>
+  
+  <!-- Inner circle -->
+  <circle cx="100" cy="100" r="65" fill="#10b981" stroke="#059669" stroke-width="4"/>
+  
+  <!-- Text -->
+  <text x="100" y="75" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="16" font-weight="bold">KLN Innovation</text>
+  <text x="100" y="95" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="16" font-weight="bold">& Research Park</text>
+  <text x="100" y="115" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12">Innovate New Ideas</text>
+  
+  <!-- Arrow -->
+  <path d="M 55 145 L 75 125 L 70 125 L 70 105 L 80 105 L 80 125 L 75 125 L 95 145 Z" fill="white" stroke="white" stroke-width="1"/>
+  
+  <!-- Pen tip -->
+  <circle cx="135" cy="145" r="4" fill="white"/>
+  
+  <!-- Border -->
+  <rect width="200" height="200" fill="none" stroke="#e2e8f0" stroke-width="2" rx="20"/>
+</svg>
