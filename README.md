@@ -1,36 +1,145 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# IRP Booking System
+
+A comprehensive booking system for IRP (Innovation & Research Park) review sessions, built with Next.js and Supabase.
+
+## Features
+
+### User Features
+- **Landing Page**: Clean interface with IRP logo and main navigation
+- **User Authentication**: Sign up and sign in with detailed user information
+- **Profile Completion**: Team member details collection popup
+- **Booking System**: Movie-style UI for slot selection
+- **Review Instructions**: Clear guidelines for presentation sessions
+- **Real-time Slot Status**: Visual indicators for available/booked slots
+
+### Admin Features
+- **Admin Dashboard**: Comprehensive management interface
+- **User Management**: View and manage all user bookings
+- **System Control**: Activate/deactivate booking system
+- **Password Management**: Secure password change functionality
+- **Auto Deactivation**: Timer-based system control
+- **Booking Management**: Remove bookings and view detailed information
+
+## Technology Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS v4
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Custom implementation with Supabase
+- **Deployment**: Vercel-ready
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Supabase account
 
+### Installation
+
+1. Clone the repository
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd booking
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables
+Create a `.env.local` file in the root directory:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Run the development server
+```bash
+npm run dev
+```
 
-## Learn More
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-To learn more about Next.js, take a look at the following resources:
+## Database Schema
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The system uses the following main tables:
+- `users`: User account information
+- `team_members`: Additional team member details
+- `bookings`: Review slot bookings
+- `admin_settings`: System configuration
+- `admin_users`: Admin authentication
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Usage
 
-## Deploy on Vercel
+### For Users
+1. Visit the landing page
+2. Click "Book Tickets"
+3. Create an account or sign in
+4. Complete your profile with team details
+5. Select an available review slot
+6. Read instructions and confirm booking
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### For Admins
+1. Visit the landing page
+2. Click "Login as Admin"
+3. Use credentials: admin / 2025
+4. Access the dashboard to manage bookings and system settings
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Features Overview
+
+### Booking System
+- 4-day booking window (October 6-9, 2025)
+- 4 time slots per day (1:30-2:00 PM, 2:00-2:30 PM, 2:30-3:00 PM, 3:00-3:30 PM)
+- Real-time availability status
+- Conflict prevention for simultaneous bookings
+
+### Admin Controls
+- System activation/deactivation
+- Timer-based auto deactivation
+- User booking management
+- Password security
+- Comprehensive reporting
+
+## Development
+
+### Project Structure
+```
+src/
+├── app/
+│   ├── admin/
+│   │   ├── login/
+│   │   └── dashboard/
+│   ├── user/
+│   │   ├── auth/
+│   │   └── booking/
+│   └── page.tsx
+├── components/
+└── lib/
+    └── supabase.ts
+```
+
+### Available Scripts
+- `npm run dev`: Start development server
+- `npm run build`: Build for production
+- `npm run start`: Start production server
+- `npm run lint`: Run linter
+- `npm run format`: Format code
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
+
+## Support
+
+For support and questions, please contact the development team.
