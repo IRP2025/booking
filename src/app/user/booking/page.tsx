@@ -366,23 +366,59 @@ export default function BookingPage() {
   }
 
   const handleDownloadTicket = async () => {
-    if (!user || !selectedSlot) return
+    if (!user) return
     
     setIsGeneratingTicket(true)
     try {
+      // Use existing booking data if available, otherwise use selected slot
+      let slotDate: string
+      let slotTime: string
+      let teamLeadName: string
+      let teamLeadRollNo: string
+      let projectName: string
+      let bookingId: string
+      let createdAt: string
+
+      if (existingBooking) {
+        // User has an existing booking - use that data
+        slotDate = existingBooking.slot_date
+        slotTime = existingBooking.slot_time
+        bookingId = existingBooking.id
+        createdAt = existingBooking.created_at
+        
+        // Get team details from user profile or booking data
+        teamLeadName = user.team_lead_name || bookingData.teamLeadName
+        teamLeadRollNo = user.team_lead_roll_no || bookingData.teamLeadRollNo
+        projectName = user.project_name || bookingData.projectName
+      } else if (selectedSlot) {
+        // User is booking a new slot
+        slotDate = selectedSlot.date
+        slotTime = selectedSlot.time
+        bookingId = 'temp-id'
+        createdAt = new Date().toISOString()
+        teamLeadName = bookingData.teamLeadName
+        teamLeadRollNo = bookingData.teamLeadRollNo
+        projectName = bookingData.projectName
+      } else {
+        // No booking data available
+        console.error('No booking data available for ticket generation')
+        setIsGeneratingTicket(false)
+        return
+      }
+
       const ticketData: TicketData = {
-        bookingId: existingBooking?.id || 'temp-id',
-        teamLeadName: bookingData.teamLeadName,
-        teamLeadRollNo: bookingData.teamLeadRollNo,
-        projectName: bookingData.projectName,
-        slotDate: selectedSlot.date,
-        slotTime: selectedSlot.time,
+        bookingId,
+        teamLeadName,
+        teamLeadRollNo,
+        projectName,
+        slotDate,
+        slotTime,
         department: user.department,
         year: user.year.toString(),
         userName: user.name,
         userRollNo: user.roll_no,
         userEmail: user.email,
-        createdAt: existingBooking?.created_at || new Date().toISOString()
+        createdAt
       }
       
       await generateAndDownloadTicket(ticketData)
@@ -500,6 +536,72 @@ export default function BookingPage() {
 
   const handleProfileButtonClick = () => {
     setShowProfilePopup(true)
+  }
+
+  const handleTicketPreview = async () => {
+    if (!user) return
+    
+    try {
+      setIsGeneratingTicket(true)
+      
+      // Use existing booking data if available, otherwise use selected slot
+      let slotDate: string
+      let slotTime: string
+      let teamLeadName: string
+      let teamLeadRollNo: string
+      let projectName: string
+      let bookingId: string
+      let createdAt: string
+
+      if (existingBooking) {
+        // User has an existing booking - use that data
+        slotDate = existingBooking.slot_date
+        slotTime = existingBooking.slot_time
+        bookingId = existingBooking.id
+        createdAt = existingBooking.created_at
+        
+        // Get team details from user profile or booking data
+        teamLeadName = user.team_lead_name || bookingData.teamLeadName
+        teamLeadRollNo = user.team_lead_roll_no || bookingData.teamLeadRollNo
+        projectName = user.project_name || bookingData.projectName
+      } else if (selectedSlot) {
+        // User is booking a new slot
+        slotDate = selectedSlot.date
+        slotTime = selectedSlot.time
+        bookingId = 'temp-id'
+        createdAt = new Date().toISOString()
+        teamLeadName = bookingData.teamLeadName
+        teamLeadRollNo = bookingData.teamLeadRollNo
+        projectName = bookingData.projectName
+      } else {
+        // No booking data available
+        console.error('No booking data available for ticket preview')
+        return
+      }
+
+      const ticketData: TicketData = {
+        bookingId,
+        teamLeadName,
+        teamLeadRollNo,
+        projectName,
+        slotDate,
+        slotTime,
+        department: user.department,
+        year: user.year.toString(),
+        userName: user.name,
+        userRollNo: user.roll_no,
+        userEmail: user.email,
+        createdAt
+      }
+      
+      const preview = await generateTicketPreview(ticketData)
+      setTicketPreview(preview)
+      setShowTicketModal(true)
+    } catch (error) {
+      console.error('Error generating ticket preview:', error)
+    } finally {
+      setIsGeneratingTicket(false)
+    }
   }
 
   const formatDate = (dateString: string) => {
