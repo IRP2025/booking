@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 // import { useUser } from '@/contexts/UserContext'
 import Modal from '@/components/Modal'
+import { generateAndDownloadTicket, generateTicketPreview, TicketData } from '@/lib/ticketGenerator'
 
 interface BookingSlot {
   id: string
@@ -68,6 +69,9 @@ export default function BookingPage() {
   })
   const [systemActive, setSystemActive] = useState(true)
   const [systemStatusLoading, setSystemStatusLoading] = useState(true)
+  const [showTicketModal, setShowTicketModal] = useState(false)
+  const [ticketPreview, setTicketPreview] = useState<string>('')
+  const [isGeneratingTicket, setIsGeneratingTicket] = useState(false)
 
   // Load system status from database
   const loadSystemStatus = async () => {
@@ -361,6 +365,34 @@ export default function BookingPage() {
     setTeamMembers(updated)
   }
 
+  const handleDownloadTicket = async () => {
+    if (!user || !selectedSlot) return
+    
+    setIsGeneratingTicket(true)
+    try {
+      const ticketData: TicketData = {
+        bookingId: existingBooking?.id || 'temp-id',
+        teamLeadName: bookingData.teamLeadName,
+        teamLeadRollNo: bookingData.teamLeadRollNo,
+        projectName: bookingData.projectName,
+        slotDate: selectedSlot.date,
+        slotTime: selectedSlot.time,
+        department: user.department,
+        year: user.year.toString(),
+        userName: user.name,
+        userRollNo: user.roll_no,
+        userEmail: user.email,
+        createdAt: existingBooking?.created_at || new Date().toISOString()
+      }
+      
+      await generateAndDownloadTicket(ticketData)
+    } catch (error) {
+      console.error('Error downloading ticket:', error)
+    } finally {
+      setIsGeneratingTicket(false)
+    }
+  }
+
 
   const handleBookingSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -409,6 +441,33 @@ export default function BookingPage() {
         // Refresh the slots to show updated status
         await fetchSlots()
         await checkUserBooking()
+        
+        // Generate ticket data
+        if (newBooking) {
+          const ticketData: TicketData = {
+            bookingId: newBooking.id,
+            teamLeadName: bookingData.teamLeadName,
+            teamLeadRollNo: bookingData.teamLeadRollNo,
+            projectName: bookingData.projectName,
+            slotDate: selectedSlot.date,
+            slotTime: selectedSlot.time,
+            department: user.department,
+            year: user.year.toString(),
+            userName: user.name,
+            userRollNo: user.roll_no,
+            userEmail: user.email,
+            createdAt: newBooking.created_at
+          }
+          
+          // Generate ticket preview
+          try {
+            const preview = await generateTicketPreview(ticketData)
+            setTicketPreview(preview)
+            setShowTicketModal(true)
+          } catch (error) {
+            console.error('Error generating ticket preview:', error)
+          }
+        }
         
         setShowBookingForm(false)
         setShowBookingSuccess(true)
@@ -534,59 +593,87 @@ export default function BookingPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-y-auto">
         {/* Profile Completion Popup */}
         {showProfilePopup && (
-          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-4xl my-8">
-              <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">👥</span>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 w-full max-w-5xl my-8">
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <span className="text-3xl">👥</span>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Complete Your Profile</h2>
-                <p className="text-gray-600">Add your team member details (optional)</p>
-                <p className="text-sm text-gray-500 mt-2">You can skip this for now and complete it later</p>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
+                  Complete Your Profile
+                </h2>
+                <p className="text-gray-600 text-lg font-medium">Add your team member details (optional)</p>
+                <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 rounded-2xl backdrop-blur-sm">
+                  <p className="text-sm text-blue-700 font-medium">
+                    <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                    You can skip this for now and complete it later
+                  </p>
+                </div>
               </div>
               
-              <div className="space-y-6 max-h-96 overflow-y-auto pr-2">
+              <div className="space-y-8 max-h-96 overflow-y-auto pr-2">
                 {teamMembers.map((member, index) => (
-                  <div key={index} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">Team Member {index + 1}</h3>
+                  <div key={index} className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-6 border border-gray-200/50 shadow-lg">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center text-white font-bold text-sm mr-4">
+                          {index + 1}
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-900">Team Member {index + 1}</h3>
+                      </div>
                       {teamMembers.length > 1 && (
                         <button
                           onClick={() => removeTeamMember(index)}
-                          className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                          className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-4 py-2 rounded-xl font-bold text-sm transition-all duration-300 transform hover:scale-105 shadow-md"
                         >
-                          <span className="text-sm">Remove</span>
+                          <span className="mr-1">🗑️</span>
+                          Remove
                         </button>
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-bold text-gray-700 flex items-center">
+                          <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          Full Name *
+                        </label>
                         <input
                           type="text"
                           value={member.name}
                           onChange={(e) => updateTeamMember(index, 'name', e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-500 text-gray-900 bg-white"
+                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm"
                           placeholder="Enter team member name"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Roll Number *</label>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-bold text-gray-700 flex items-center">
+                          <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                          </svg>
+                          Roll Number *
+                        </label>
                         <input
                           type="text"
                           value={member.rollNo}
                           onChange={(e) => updateTeamMember(index, 'rollNo', e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-500 text-gray-900 bg-white"
+                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm"
                           placeholder="Enter roll number"
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Department *</label>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-bold text-gray-700 flex items-center">
+                          <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                          Department *
+                        </label>
                         <select
                           value={member.department}
                           onChange={(e) => updateTeamMember(index, 'department', e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm"
                         >
                           <option value="">Select Department</option>
                           <option value="CSE">CSE</option>
@@ -599,12 +686,17 @@ export default function BookingPage() {
                           <option value="IOT">CSE IOT</option>
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Year *</label>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-bold text-gray-700 flex items-center">
+                          <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          Year *
+                        </label>
                         <select
                           value={member.year}
                           onChange={(e) => updateTeamMember(index, 'year', e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm"
                         >
                           <option value="">Select Year</option>
                           <option value="1">1st Year</option>
@@ -617,33 +709,39 @@ export default function BookingPage() {
                   </div>
                 ))}
                 
-                <div className="flex justify-center sticky bottom-0 bg-white pt-4 border-t border-gray-200">
+                <div className="flex justify-center sticky bottom-0 bg-white/95 backdrop-blur-sm pt-6 border-t border-gray-200">
                   <button
                     onClick={addTeamMember}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 shadow-sm"
+                    className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
                   >
-                    + Add Team Member
+                    <span className="mr-2">➕</span>
+                    Add Team Member
                   </button>
                 </div>
               </div>
               
               {teamMembers.length > 3 && (
-                <div className="text-center mt-2">
-                  <p className="text-sm text-gray-500">Scroll up to see more team members</p>
+                <div className="text-center mt-4">
+                  <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50 rounded-full">
+                    <span className="w-2 h-2 bg-amber-500 rounded-full mr-2"></span>
+                    <p className="text-sm text-amber-700 font-medium">Scroll up to see more team members</p>
+                  </div>
                 </div>
               )}
               
-              <div className="flex justify-center gap-4 mt-8">
+              <div className="flex justify-center gap-6 mt-8">
                 <button
                   onClick={handleProfileSkip}
-                  className="bg-gray-500 hover:bg-gray-600 text-white px-8 py-3 rounded-lg font-medium transition-colors duration-200 shadow-sm"
+                  className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
                 >
+                  <span className="mr-2">⏭️</span>
                   Skip for Now
                 </button>
                 <button
                   onClick={handleProfileComplete}
-                  className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-medium transition-colors duration-200 shadow-sm"
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
                 >
+                  <span className="mr-2">✅</span>
                   Complete Profile
                 </button>
               </div>
@@ -814,6 +912,25 @@ export default function BookingPage() {
                   {existingBooking && `Booked for ${formatDate(existingBooking.slot_date)} at ${existingBooking.slot_time}`}
                 </p>
                 <p className="text-blue-600 text-sm">Each user can only book one slot.</p>
+                <button
+                  onClick={handleDownloadTicket}
+                  disabled={isGeneratingTicket}
+                  className="mt-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-md disabled:opacity-50 flex items-center"
+                >
+                  {isGeneratingTicket ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Download Ticket
+                    </>
+                  )}
+                </button>
               </div>
             ) : (
               <p className="text-gray-500">Click on available slots (green) to book your review session</p>
@@ -954,6 +1071,88 @@ export default function BookingPage() {
             >
               Great! Continue
             </button>
+          </div>
+        </Modal>
+
+        {/* Ticket Preview Modal */}
+        <Modal
+          isOpen={showTicketModal}
+          onClose={() => setShowTicketModal(false)}
+          title=""
+          showCloseButton={true}
+        >
+          <div className="text-center py-4">
+            {/* Success Icon */}
+            <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            
+            {/* Success Message */}
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">
+              Booking Confirmed! 🎉
+            </h3>
+            <p className="text-gray-600 mb-8 text-lg">
+              Your slot has been successfully booked. Download your ticket below for verification.
+            </p>
+            
+            {/* Ticket Preview */}
+            {ticketPreview && (
+              <div className="mb-8">
+                <h4 className="text-lg font-semibold text-gray-800 mb-4">Ticket Preview:</h4>
+                <div className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <img 
+                    src={ticketPreview} 
+                    alt="Ticket Preview" 
+                    className="max-w-full h-auto rounded-lg shadow-md"
+                    style={{ maxHeight: '300px' }}
+                  />
+                </div>
+              </div>
+            )}
+            
+            {/* Action Buttons */}
+            <div className="space-y-4">
+              <button
+                onClick={handleDownloadTicket}
+                disabled={isGeneratingTicket}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 flex items-center justify-center disabled:opacity-50"
+              >
+                {isGeneratingTicket ? (
+                  <>
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
+                    Generating Ticket...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Download Ticket (PNG)
+                  </>
+                )}
+              </button>
+              
+              <button
+                onClick={() => setShowTicketModal(false)}
+                className="w-full text-gray-600 hover:text-gray-800 px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+              >
+                Close
+              </button>
+            </div>
+            
+            {/* Helpful Info */}
+            <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
+              <div className="flex items-center justify-center space-x-2 text-blue-700">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm font-medium">
+                  Keep your ticket safe! You'll need it for verification on the day of your review.
+                </span>
+              </div>
+            </div>
           </div>
         </Modal>
       </div>

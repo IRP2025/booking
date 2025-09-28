@@ -27,7 +27,7 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('overview')
   const [systemActive, setSystemActive] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [adminSlots, setAdminSlots] = useState([])
+  const [adminSlots, setAdminSlots] = useState<any[]>([])
   const [adminLoading, setAdminLoading] = useState(false)
   const [autoDeactivate, setAutoDeactivate] = useState('')
   const [currentPassword, setCurrentPassword] = useState('')
@@ -41,6 +41,8 @@ export default function AdminDashboard() {
 
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const [showBookingDetail, setShowBookingDetail] = useState(false)
 
   // Fetch real bookings data from Supabase
   const fetchBookings = async () => {
@@ -73,16 +75,16 @@ export default function AdminDashboard() {
       const formattedBookings: Booking[] = data?.map(booking => ({
         id: booking.id,
         user: {
-          name: booking.users.name,
-          rollNo: booking.users.roll_no,
-          department: booking.users.department,
-          email: booking.users.email
+          name: (booking.users as any)?.name || '',
+          rollNo: (booking.users as any)?.roll_no || '',
+          department: (booking.users as any)?.department || '',
+          email: (booking.users as any)?.email || ''
         },
         slotDate: booking.slot_date,
         slotTime: booking.slot_time,
-        projectName: booking.users.project_name,
-        teamLeadName: booking.users.team_lead_name,
-        teamLeadRollNo: booking.users.team_lead_roll_no,
+        projectName: (booking.users as any)?.project_name || '',
+        teamLeadName: (booking.users as any)?.team_lead_name || '',
+        teamLeadRollNo: (booking.users as any)?.team_lead_roll_no || '',
         createdAt: booking.created_at
       })) || []
 
@@ -128,15 +130,15 @@ export default function AdminDashboard() {
         const key = `${booking.slot_date}-${booking.slot_time}`
         bookedSlots.set(key, {
           bookingId: booking.id,
-          bookedBy: booking.users.name,
-          projectName: booking.users.project_name,
-          teamLeadName: booking.users.team_lead_name,
-          teamLeadRollNo: booking.users.team_lead_roll_no
+          bookedBy: (booking.users as any)?.name || 'Unknown',
+          projectName: (booking.users as any)?.project_name || 'Unknown',
+          teamLeadName: (booking.users as any)?.team_lead_name || 'Unknown',
+          teamLeadRollNo: (booking.users as any)?.team_lead_roll_no || 'Unknown'
         })
       })
 
       // Generate all slots with booking status
-      const allSlots = []
+      const allSlots: any[] = []
       dates.forEach(date => {
         times.forEach(time => {
           const key = `${date}-${time.time}`
@@ -287,6 +289,17 @@ export default function AdminDashboard() {
     }
   }
 
+  // Handle booking detail view
+  const handleBookingClick = (booking: Booking) => {
+    setSelectedBooking(booking)
+    setShowBookingDetail(true)
+  }
+
+  const closeBookingDetail = () => {
+    setShowBookingDetail(false)
+    setSelectedBooking(null)
+  }
+
   // Format date for display
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -318,21 +331,22 @@ export default function AdminDashboard() {
     setPasswordSuccess('')
 
     try {
-      // First, verify the current password by checking the database
+      // Check if admin user exists in database
       const { data: admin, error: fetchError } = await supabase
         .from('admin_users')
         .select('password_hash')
         .eq('username', 'admin')
         .single()
 
-      if (fetchError || !admin) {
-        setPasswordError('Failed to verify current password')
-        return
+      let currentValidPassword = '2004' // Default hardcoded password
+
+      if (!fetchError && admin) {
+        // Admin exists in database - use database password
+        currentValidPassword = admin.password_hash
       }
 
-      // For now, we'll check against the hardcoded password as fallback
-      // In a production system, you'd verify the hashed password
-      if (currentPassword !== '2025' && currentPassword !== admin.password_hash) {
+      // Check current password - only allow the current valid password
+      if (currentPassword !== currentValidPassword) {
         setPasswordError('Current password is incorrect')
         return
       }
@@ -347,18 +361,36 @@ export default function AdminDashboard() {
         return
       }
 
-      // Update the password in the database
-      const { error: updateError } = await supabase
-        .from('admin_users')
-        .update({ 
-          password_hash: newPassword,
-          updated_at: new Date().toISOString()
-        })
-        .eq('username', 'admin')
+      // Update or create the admin user in the database
+      if (!fetchError && admin) {
+        // Update existing admin user
+        const { error: updateError } = await supabase
+          .from('admin_users')
+          .update({ 
+            password_hash: newPassword,
+            updated_at: new Date().toISOString()
+          })
+          .eq('username', 'admin')
 
-      if (updateError) {
-        setPasswordError('Failed to update password. Please try again.')
-        return
+        if (updateError) {
+          setPasswordError('Failed to update password. Please try again.')
+          return
+        }
+      } else {
+        // Create new admin user
+        const { error: insertError } = await supabase
+          .from('admin_users')
+          .insert({
+            username: 'admin',
+            password_hash: newPassword,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+
+        if (insertError) {
+          setPasswordError('Failed to create admin user. Please try again.')
+          return
+        }
       }
 
       setPasswordSuccess('Password changed successfully! You will be logged out in 3 seconds...')
@@ -468,48 +500,63 @@ export default function AdminDashboard() {
   // Show loading while checking authentication
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%239C92AC%22%20fill-opacity%3D%220.1%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+        
+        <div className="text-center relative z-10">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-400 border-t-transparent mx-auto mb-6"></div>
+          <p className="text-white text-xl font-medium">Loading Admin Dashboard...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white/80 backdrop-blur-lg shadow-xl border-b border-white/20 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+          <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <Link href="/" className="flex items-center">
-                <Image
-                  src="/irp-logo.jpg"
-                  alt="IRP Logo"
-                  width={50}
-                  height={50}
-                  className="rounded-lg mr-3"
-                />
-                <h1 className="text-xl font-bold text-gray-800">IRP Admin Dashboard</h1>
+              <Link href="/" className="flex items-center group">
+                <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-blue-500 to-purple-600 p-1 group-hover:scale-105 transition-transform duration-300">
+                  <Image
+                    src="/irp-logo.jpg"
+                    alt="IRP Logo"
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-contain rounded-xl"
+                  />
+                </div>
+                <div className="ml-4">
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    IRP Admin Dashboard
+                  </h1>
+                  <p className="text-sm text-gray-500">Booking System Management</p>
+                </div>
               </Link>
             </div>
             <div className="flex items-center gap-4">
-              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                systemActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              <div className={`px-4 py-2 rounded-full text-sm font-bold shadow-lg ${
+                systemActive 
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' 
+                  : 'bg-gradient-to-r from-red-500 to-pink-500 text-white'
               }`}>
+                <span className="mr-2">{systemActive ? '✅' : '❌'}</span>
                 {systemActive ? 'System Active' : 'System Inactive'}
               </div>
               {timerActive && (
-                <div className="px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
-                  ⏰ Auto-deactivate in: {formatTimeRemaining(timeRemaining)}
+                <div className="px-4 py-2 rounded-full text-sm font-bold bg-gradient-to-r from-orange-500 to-yellow-500 text-white shadow-lg">
+                  <span className="mr-2">⏰</span>
+                  Auto-deactivate in: {formatTimeRemaining(timeRemaining)}
                 </div>
               )}
               <button
                 onClick={handleLogout}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md"
+                className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
+                <span className="mr-2">🚪</span>
                 Logout
               </button>
             </div>
@@ -519,31 +566,29 @@ export default function AdminDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation Tabs */}
-        <div className="bg-white rounded-lg shadow-sm mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6">
-              {[
-                { id: 'overview', name: 'Overview', icon: '📊' },
-                { id: 'bookings', name: 'All Bookings', icon: '📅' },
-                { id: 'slots', name: 'Visual Slots', icon: '🎯' },
-                { id: 'settings', name: 'System Settings', icon: '⚙️' },
-                { id: 'password', name: 'Change Password', icon: '🔒' }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="mr-2">{tab.icon}</span>
-                  {tab.name}
-                </button>
-              ))}
-            </nav>
-          </div>
+        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 mb-8 overflow-hidden">
+          <nav className="flex space-x-1 p-2">
+            {[
+              { id: 'overview', name: 'Overview', icon: '📊', color: 'from-blue-500 to-cyan-500' },
+              { id: 'bookings', name: 'All Bookings', icon: '📅', color: 'from-green-500 to-emerald-500' },
+              { id: 'slots', name: 'Visual Slots', icon: '🎯', color: 'from-purple-500 to-pink-500' },
+              { id: 'settings', name: 'System Settings', icon: '⚙️', color: 'from-orange-500 to-red-500' },
+              { id: 'password', name: 'Change Password', icon: '🔒', color: 'from-gray-500 to-slate-500' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 py-4 px-6 rounded-xl font-bold text-sm transition-all duration-300 transform hover:scale-105 ${
+                  activeTab === tab.id
+                    ? `bg-gradient-to-r ${tab.color} text-white shadow-lg`
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                }`}
+              >
+                <span className="mr-2 text-lg">{tab.icon}</span>
+                {tab.name}
+              </button>
+            ))}
+          </nav>
         </div>
 
         {/* Overview Tab */}
@@ -556,100 +601,118 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-white p-6 rounded-lg shadow-sm">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <span className="text-2xl">📅</span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="bg-gradient-to-br from-blue-500 to-cyan-500 p-8 rounded-2xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-blue-100 text-sm font-bold uppercase tracking-wider">Total Bookings</p>
+                        <p className="text-4xl font-bold mt-2">{bookings.length}</p>
+                        <p className="text-blue-200 text-sm mt-1">All time bookings</p>
                       </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600">Total Bookings</p>
-                        <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>
+                      <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                        <span className="text-3xl">📅</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white p-6 rounded-lg shadow-sm">
-                    <div className="flex items-center">
-                      <div className={`p-2 rounded-lg ${
-                        systemActive ? 'bg-green-100' : 'bg-red-100'
-                      }`}>
-                        <span className={`text-2xl ${
-                          systemActive ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {systemActive ? '✅' : '❌'}
-                        </span>
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600">System Status</p>
-                        <p className={`text-2xl font-bold ${
-                          systemActive ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {systemActive ? 'Active' : 'Inactive'}
+                  <div className={`p-8 rounded-2xl shadow-xl text-white transform hover:scale-105 transition-all duration-300 ${
+                    systemActive 
+                      ? 'bg-gradient-to-br from-green-500 to-emerald-500' 
+                      : 'bg-gradient-to-br from-red-500 to-pink-500'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white/80 text-sm font-bold uppercase tracking-wider">System Status</p>
+                        <p className="text-4xl font-bold mt-2">{systemActive ? 'Active' : 'Inactive'}</p>
+                        <p className="text-white/80 text-sm mt-1">
+                          {systemActive ? 'System is running' : 'System is disabled'}
                         </p>
                       </div>
+                      <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                        <span className="text-3xl">{systemActive ? '✅' : '❌'}</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="bg-white p-6 rounded-lg shadow-sm">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-yellow-100 rounded-lg">
-                        <span className="text-2xl">👥</span>
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600">Unique Users</p>
-                        <p className="text-2xl font-bold text-gray-900">
+                  <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-8 rounded-2xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-purple-100 text-sm font-bold uppercase tracking-wider">Unique Users</p>
+                        <p className="text-4xl font-bold mt-2">
                           {new Set(bookings.map(b => b.user.rollNo)).size}
                         </p>
+                        <p className="text-purple-200 text-sm mt-1">Registered students</p>
+                      </div>
+                      <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                        <span className="text-3xl">👥</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h3 className="text-lg font-semibold mb-4">Recent Bookings</h3>
+                <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                      Recent Bookings
+                    </h3>
+                    <div className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full text-sm font-bold">
+                      {bookings.slice(0, 5).length} Recent
+                    </div>
+                  </div>
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            User
+                    <table className="min-w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                            User Details
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Slot
+                          <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                            Slot Information
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Project
+                          <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                            Project Details
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                             Booked At
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {bookings.slice(0, 5).map(booking => (
-                          <tr key={booking.id}>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">
-                                  {booking.user.name}
+                      <tbody className="divide-y divide-gray-100">
+                        {bookings.slice(0, 5).map((booking, index) => (
+                          <tr 
+                            key={booking.id} 
+                            className="hover:bg-blue-50 cursor-pointer transition-all duration-200 hover:shadow-md"
+                            onClick={() => handleBookingClick(booking)}
+                          >
+                            <td className="px-6 py-6 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-4">
+                                  {booking.user.name.charAt(0)}
                                 </div>
-                                <div className="text-sm text-gray-500">
-                                  {booking.user.rollNo} • {booking.user.department}
+                                <div>
+                                  <div className="text-sm font-bold text-gray-900">
+                                    {booking.user.name}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {booking.user.rollNo} • {booking.user.department}
+                                  </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {formatDate(booking.slotDate)} at {booking.slotTime}
+                            <td className="px-6 py-6 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">
+                                {formatDate(booking.slotDate)}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {booking.slotTime}
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
+                            <td className="px-6 py-6 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">
                                 {booking.projectName}
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-6 whitespace-nowrap text-sm text-gray-500">
                               {formatDate(booking.createdAt)}
                             </td>
                           </tr>
@@ -695,7 +758,11 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {bookings.map(booking => (
-                    <tr key={booking.id}>
+                    <tr 
+                      key={booking.id} 
+                      className="hover:bg-blue-50 cursor-pointer transition-all duration-200 hover:shadow-md"
+                      onClick={() => handleBookingClick(booking)}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
@@ -726,12 +793,27 @@ export default function AdminDashboard() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => removeBooking(booking.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Remove
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleBookingClick(booking)
+                            }}
+                            className="text-blue-600 hover:text-blue-900 font-medium"
+                          >
+                            View Details
+                          </button>
+                          <span className="text-gray-300">|</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              removeBooking(booking.id)
+                            }}
+                            className="text-red-600 hover:text-red-900 font-medium"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -811,73 +893,99 @@ export default function AdminDashboard() {
 
         {/* Settings Tab */}
         {activeTab === 'settings' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h3 className="text-lg font-semibold mb-4">System Control</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900">System Status</h4>
-                    <p className="text-sm text-gray-500">
-                      Control whether users can book slots
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleSystemToggle}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      systemActive ? 'bg-green-600' : 'bg-gray-200'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        systemActive ? 'translate-x-6' : 'translate-x-1'
+          <div className="space-y-8">
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
+              <div className="flex items-center mb-8">
+                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mr-4">
+                  <span className="text-2xl">⚙️</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    System Control
+                  </h3>
+                  <p className="text-gray-600">Manage system settings and controls</p>
+                </div>
+              </div>
+              
+              <div className="space-y-8">
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h4 className="text-lg font-bold text-gray-900 mb-2">System Status</h4>
+                      <p className="text-gray-600 mb-4">
+                        Control whether users can book slots in the system
+                      </p>
+                      <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-bold ${
+                        systemActive 
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' 
+                          : 'bg-gradient-to-r from-red-500 to-pink-500 text-white'
+                      }`}>
+                        <span className="mr-2">{systemActive ? '✅' : '❌'}</span>
+                        {systemActive ? 'System is Active' : 'System is Inactive'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleSystemToggle}
+                      className={`relative inline-flex h-8 w-16 items-center rounded-full transition-all duration-300 transform hover:scale-105 ${
+                        systemActive ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-gray-400 to-gray-500'
                       }`}
-                    />
-                  </button>
+                    >
+                      <span
+                        className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform duration-300 ${
+                          systemActive ? 'translate-x-9' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium text-gray-900 mb-2">Auto Deactivate Timer</h4>
-                  <p className="text-sm text-gray-500 mb-3">
-                    Set a timer to automatically deactivate the system
-                  </p>
+                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mr-3">
+                      <span className="text-xl">⏰</span>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold text-gray-900">Auto Deactivate Timer</h4>
+                      <p className="text-gray-600">Set a timer to automatically deactivate the system</p>
+                    </div>
+                  </div>
                   
                   {timerActive ? (
-                    <div className="space-y-3">
-                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <div className="space-y-4">
+                      <div className="bg-gradient-to-r from-orange-500 to-yellow-500 rounded-2xl p-6 text-white">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-orange-800">Timer Active</p>
-                            <p className="text-lg font-bold text-orange-900">
+                            <p className="text-orange-100 text-sm font-bold uppercase tracking-wider">Timer Active</p>
+                            <p className="text-3xl font-bold mt-2">
                               {formatTimeRemaining(timeRemaining)}
                             </p>
-                            <p className="text-xs text-orange-600">
+                            <p className="text-orange-100 text-sm mt-1">
                               System will deactivate automatically
                             </p>
                           </div>
-                          <div className="text-2xl">⏰</div>
+                          <div className="text-4xl">⏰</div>
                         </div>
                       </div>
                       <button
                         onClick={handleCancelTimer}
-                        className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
+                        className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
                       >
                         Cancel Timer
                       </button>
                     </div>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex gap-4">
                       <input
                         type="number"
                         value={autoDeactivate}
                         onChange={(e) => setAutoDeactivate(e.target.value)}
-                        placeholder="Minutes"
+                        placeholder="Enter minutes"
                         min="1"
-                        className="px-3 py-2 border border-gray-300 rounded-md w-32 placeholder:text-black text-black"
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-medium"
                       />
                       <button
                         onClick={handleAutoDeactivate}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                        className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-8 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
                       >
                         Set Timer
                       </button>
@@ -891,11 +999,25 @@ export default function AdminDashboard() {
 
         {/* Password Change Tab */}
         {activeTab === 'password' && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold mb-4">Change Password</h3>
-            <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
+          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
+            <div className="flex items-center mb-8">
+              <div className="w-12 h-12 bg-gradient-to-r from-gray-500 to-slate-500 rounded-2xl flex items-center justify-center mr-4">
+                <span className="text-2xl">🔒</span>
+              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                  Change Password
+                </h3>
+                <p className="text-gray-600">Update your admin account password</p>
+              </div>
+            </div>
+            
+            <form onSubmit={handlePasswordChange} className="space-y-6 max-w-lg">
+              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-6">
+                <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
                   Current Password
                 </label>
                 <input
@@ -903,12 +1025,17 @@ export default function AdminDashboard() {
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-black text-black"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-medium"
+                  placeholder="Enter current password"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6">
+                <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
                   New Password
                 </label>
                 <input
@@ -916,12 +1043,16 @@ export default function AdminDashboard() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-black text-black"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-medium"
+                  placeholder="Enter new password"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6">
+                <label className="block text-sm font-bold text-gray-700 mb-3 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   Confirm New Password
                 </label>
                 <input
@@ -929,25 +1060,172 @@ export default function AdminDashboard() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-black text-black"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-900 font-medium"
+                  placeholder="Confirm new password"
                 />
               </div>
 
               {passwordError && (
-                <div className="text-red-600 text-sm">{passwordError}</div>
+                <div className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-4 rounded-xl font-bold flex items-center">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  {passwordError}
+                </div>
               )}
 
               {passwordSuccess && (
-                <div className="text-green-600 text-sm">{passwordSuccess}</div>
+                <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-4 rounded-xl font-bold flex items-center">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {passwordSuccess}
+                </div>
               )}
 
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
+                <span className="mr-2">🔐</span>
                 Change Password
               </button>
             </form>
+          </div>
+        )}
+
+        {/* Booking Detail Modal */}
+        {showBookingDetail && selectedBooking && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mr-4">
+                    <span className="text-2xl">📋</span>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                      Booking Details
+                    </h3>
+                    <p className="text-gray-600">Complete information about this booking</p>
+                  </div>
+                </div>
+                <button
+                  onClick={closeBookingDetail}
+                  className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors duration-200"
+                >
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Booking Information */}
+              <div className="space-y-8">
+                {/* User Information */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6">
+                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    User Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
+                      <p className="text-lg font-semibold text-gray-900">{selectedBooking.user.name}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Roll Number</label>
+                      <p className="text-lg font-semibold text-gray-900">{selectedBooking.user.rollNo}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Department</label>
+                      <p className="text-lg font-semibold text-gray-900">{selectedBooking.user.department}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
+                      <p className="text-lg font-semibold text-gray-900">{selectedBooking.user.email}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Slot Information */}
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6">
+                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Slot Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Date</label>
+                      <p className="text-lg font-semibold text-gray-900">{formatDate(selectedBooking.slotDate)}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Time</label>
+                      <p className="text-lg font-semibold text-gray-900">{selectedBooking.slotTime}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Booking ID</label>
+                      <p className="text-lg font-semibold text-gray-900 font-mono">{selectedBooking.id}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Booked At</label>
+                      <p className="text-lg font-semibold text-gray-900">{formatDate(selectedBooking.createdAt)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Project Information */}
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6">
+                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    Project Information
+                  </h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Project Name</label>
+                      <p className="text-lg font-semibold text-gray-900">{selectedBooking.projectName}</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">Team Lead Name</label>
+                        <p className="text-lg font-semibold text-gray-900">{selectedBooking.teamLeadName}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-600 mb-1">Team Lead Roll No</label>
+                        <p className="text-lg font-semibold text-gray-900">{selectedBooking.teamLeadRollNo}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-200">
+                <button
+                  onClick={closeBookingDetail}
+                  className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    removeBooking(selectedBooking.id)
+                    closeBookingDetail()
+                  }}
+                  className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
+                >
+                  <span className="mr-2">🗑️</span>
+                  Remove Booking
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

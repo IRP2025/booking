@@ -194,56 +194,72 @@ export default function UserAuth() {
   // No auto-redirect - let user choose when to proceed
 
   return (
-    <div className="min-h-screen gradient-bg flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Professional Background Pattern */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%236366f1%22%20fill-opacity%3D%220.03%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%221.5%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
+      
+      {/* Subtle geometric elements */}
+      <div className="absolute top-20 right-20 w-32 h-32 bg-gradient-to-r from-blue-400/10 to-indigo-400/10 rounded-full blur-xl"></div>
+      <div className="absolute bottom-20 left-20 w-24 h-24 bg-gradient-to-r from-purple-400/10 to-pink-400/10 rounded-full blur-xl"></div>
+      <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-gradient-to-r from-cyan-400/10 to-blue-400/10 rounded-full blur-xl"></div>
+
+      <div className="w-full max-w-lg relative z-10">
         {/* Header */}
-        <div className="text-center mb-8 animate-fade-in-up">
-          <Link href="/" className="inline-block mb-6">
-            <div className="mx-auto w-16 h-16 rounded-2xl overflow-hidden shadow-lg">
+        <div className="text-center mb-10">
+          <Link href="/" className="inline-block mb-8 group">
+            <div className="mx-auto w-20 h-20 rounded-3xl overflow-hidden shadow-2xl bg-white/80 backdrop-blur-sm border border-white/20 group-hover:scale-105 transition-all duration-300">
               <Image
                 src="/irp-logo.jpg"
                 alt="IRP Logo"
-                width={64}
-                height={64}
-                className="w-full h-full object-contain"
+                width={80}
+                height={80}
+                className="w-full h-full object-contain p-2"
               />
             </div>
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
             {isSignUp ? 'Create Account' : 'Welcome Back'}
           </h1>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-lg font-medium">
             {isSignUp ? 'Join the IRP Booking System' : 'Sign in to continue'}
           </p>
+          
+          {/* Status Messages */}
           {isSignUp && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl">
-              <p className="text-sm text-green-700">
-                <strong>Already have an account?</strong> If you're getting "roll number already exists" error, you may already be registered. Try signing in instead.
-              </p>
+            <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200/50 rounded-2xl backdrop-blur-sm">
+              <div className="flex items-center justify-center">
+                <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+                <p className="text-sm text-green-700 font-medium">
+                  <strong>Already have an account?</strong> Try signing in instead.
+                </p>
+              </div>
             </div>
           )}
           {!isSignUp && (
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-              <p className="text-sm text-blue-700">
-                <strong>First time?</strong> Please create an account first, then you can sign in.
-              </p>
-              <p className="text-xs text-blue-600 mt-1">
-                If you're getting "roll number already exists" error, you may already have an account. Try signing in instead.
-              </p>
+            <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200/50 rounded-2xl backdrop-blur-sm">
+              <div className="flex items-center justify-center">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                <p className="text-sm text-blue-700 font-medium">
+                  <strong>First time?</strong> Create an account to get started.
+                </p>
+              </div>
             </div>
           )}
         </div>
 
         {/* Auth Card */}
-        <div className="modern-card p-8 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+        <div className="bg-white/80 backdrop-blur-lg border border-white/20 rounded-3xl p-8 shadow-2xl">
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
             {isSignUp && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-gray-700 flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
                       Full Name *
                     </label>
                     <input
@@ -252,13 +268,16 @@ export default function UserAuth() {
                       value={formData.name}
                       onChange={handleInputChange}
                       required
-                      className="modern-input w-full"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
                       placeholder="Enter your full name"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-gray-700 flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
                       Roll Number *
                     </label>
                     <input
@@ -267,15 +286,18 @@ export default function UserAuth() {
                       value={formData.rollNo}
                       onChange={handleInputChange}
                       required
-                      className="modern-input w-full"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
                       placeholder="Enter your roll number"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-gray-700 flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
                       Department *
                     </label>
                     <select
@@ -283,7 +305,7 @@ export default function UserAuth() {
                       value={formData.department}
                       onChange={handleInputChange}
                       required
-                      className="modern-input w-full"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
                     >
                       <option value="">Select Department</option>
                       <option value="CSE">CSE</option>
@@ -297,8 +319,11 @@ export default function UserAuth() {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-bold text-gray-700 flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
                       Year *
                     </label>
                     <select
@@ -306,7 +331,7 @@ export default function UserAuth() {
                       value={formData.year}
                       onChange={handleInputChange}
                       required
-                      className="modern-input w-full"
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
                     >
                       <option value="">Select Year</option>
                       <option value="1">1st Year</option>
@@ -317,8 +342,11 @@ export default function UserAuth() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-gray-700 flex items-center">
+                    <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                    </svg>
                     Email Address *
                   </label>
                   <input
@@ -327,17 +355,20 @@ export default function UserAuth() {
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    className="modern-input w-full"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
                     placeholder="Enter your email address"
                   />
                 </div>
               </div>
             )}
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               {!isSignUp && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-gray-700 flex items-center">
+                    <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                    </svg>
                     Email Address *
                   </label>
                   <input
@@ -346,14 +377,17 @@ export default function UserAuth() {
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    className="modern-input w-full"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
                     placeholder="Enter your email address"
                   />
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-gray-700 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
                   Password *
                 </label>
                 <input
@@ -362,14 +396,17 @@ export default function UserAuth() {
                   value={formData.password}
                   onChange={handleInputChange}
                   required
-                  className="modern-input w-full"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
                   placeholder={isSignUp ? 'Create a strong password' : 'Enter your password'}
                 />
               </div>
 
               {isSignUp && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <div className="space-y-2">
+                  <label className="block text-sm font-bold text-gray-700 flex items-center">
+                    <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                     Confirm Password *
                   </label>
                   <input
@@ -378,7 +415,7 @@ export default function UserAuth() {
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     required
-                    className="modern-input w-full"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
                     placeholder="Confirm your password"
                   />
                 </div>
@@ -388,20 +425,20 @@ export default function UserAuth() {
             <button
               type="submit"
               disabled={isLoading || isSuccess}
-              className={`w-full py-4 text-base font-semibold disabled:cursor-not-allowed flex items-center justify-center transition-all duration-300 ${
+              className={`w-full py-4 px-6 rounded-xl font-bold text-lg disabled:cursor-not-allowed flex items-center justify-center transition-all duration-300 transform hover:scale-105 shadow-lg ${
                 isSuccess 
-                  ? 'bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-lg' 
-                  : 'modern-button disabled:opacity-50'
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' 
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white disabled:opacity-50'
               }`}
             >
               {isLoading ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
                   {isSignUp ? 'Creating Account...' : 'Signing In...'}
                 </>
               ) : isSuccess ? (
                 <>
-                  <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   {isSignUp ? 'Account Created!' : 'Signed In!'}
@@ -409,31 +446,48 @@ export default function UserAuth() {
               ) : (
                 <>
                   {isSignUp ? 'Create Account' : 'Sign In'}
-                  <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="ml-3 w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
                 </>
               )}
             </button>
-        </form>
+          </form>
 
-          {/* Toggle between sign in and sign up */}
+          {/* Toggle between Sign In and Sign Up */}
           <div className="mt-8 text-center">
-            <p className="text-gray-600">
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+            <div className="bg-gray-50 rounded-2xl p-6">
+              <p className="text-gray-600 text-sm font-medium mb-3">
+                {isSignUp ? 'Already have an account?' : "Don't have an account?"}
+              </p>
               <button
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="ml-2 text-blue-600 hover:text-blue-700 font-semibold transition-colors"
+                onClick={() => {
+                  setIsSignUp(!isSignUp)
+                  setFormData({
+                    name: '',
+                    rollNo: '',
+                    department: '',
+                    email: '',
+                    year: '',
+                    password: '',
+                    confirmPassword: ''
+                  })
+                  setErrorMessage('')
+                }}
+                className="bg-white text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 transform hover:scale-105 shadow-md border border-blue-200"
               >
-                {isSignUp ? 'Sign In' : 'Create Account'}
+                {isSignUp ? 'Sign In Instead' : 'Create Account Instead'}
               </button>
-            </p>
+            </div>
           </div>
 
           {/* Back to home */}
-          <div className="mt-4 text-center">
-            <Link href="/" className="text-gray-500 hover:text-gray-700 text-sm transition-colors">
-              ← Back to Home
+          <div className="mt-6 text-center">
+            <Link href="/" className="text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors duration-300 flex items-center justify-center group">
+              <svg className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Home
             </Link>
           </div>
         </div>

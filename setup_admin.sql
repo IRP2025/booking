@@ -8,13 +8,13 @@ ORDER BY ordinal_position;
 
 -- Update the existing admin user with the correct password
 UPDATE admin_users 
-SET password_hash = '2025', 
+SET password_hash = '2004', 
     updated_at = NOW()
 WHERE username = 'admin';
 
 -- If no admin user exists, insert one
 INSERT INTO admin_users (username, password_hash) 
-SELECT 'admin', '2025'
+SELECT 'admin', '2004'
 WHERE NOT EXISTS (SELECT 1 FROM admin_users WHERE username = 'admin');
 
 -- Create index for faster lookups
