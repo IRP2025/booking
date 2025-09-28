@@ -593,38 +593,38 @@ export default function BookingPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-y-auto">
         {/* Profile Completion Popup */}
         {showProfilePopup && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 w-full max-w-5xl my-8">
-              <div className="text-center mb-8">
-                <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                  <span className="text-3xl">👥</span>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+            <div className="bg-white/95 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 p-4 sm:p-8 w-full max-w-5xl my-4 sm:my-8 max-h-[95vh] overflow-y-auto">
+              <div className="text-center mb-6 sm:mb-8">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg">
+                  <span className="text-2xl sm:text-3xl">👥</span>
                 </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
+                <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
                   Complete Your Profile
                 </h2>
-                <p className="text-gray-600 text-lg font-medium">Add your team member details (optional)</p>
-                <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 rounded-2xl backdrop-blur-sm">
-                  <p className="text-sm text-blue-700 font-medium">
+                <p className="text-gray-600 text-base sm:text-lg font-medium">Add your team member details (optional)</p>
+                <div className="mt-4 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 rounded-xl sm:rounded-2xl backdrop-blur-sm">
+                  <p className="text-xs sm:text-sm text-blue-700 font-medium">
                     <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
                     You can skip this for now and complete it later
                   </p>
                 </div>
               </div>
               
-              <div className="space-y-8 max-h-96 overflow-y-auto pr-2">
+              <div className="space-y-6 sm:space-y-8 max-h-96 overflow-y-auto pr-1 sm:pr-2">
                 {teamMembers.map((member, index) => (
-                  <div key={index} className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-6 border border-gray-200/50 shadow-lg">
-                    <div className="flex items-center justify-between mb-6">
+                  <div key={index} className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-4 sm:p-6 border border-gray-200/50 shadow-lg">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center text-white font-bold text-sm mr-4">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center text-white font-bold text-xs sm:text-sm mr-3 sm:mr-4">
                           {index + 1}
                         </div>
-                        <h3 className="text-xl font-bold text-gray-900">Team Member {index + 1}</h3>
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900">Team Member {index + 1}</h3>
                       </div>
                       {teamMembers.length > 1 && (
                         <button
                           onClick={() => removeTeamMember(index)}
-                          className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-4 py-2 rounded-xl font-bold text-sm transition-all duration-300 transform hover:scale-105 shadow-md"
+                          className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-3 sm:px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 transform hover:scale-105 shadow-md self-start sm:self-auto"
                         >
                           <span className="mr-1">🗑️</span>
                           Remove
@@ -632,10 +632,10 @@ export default function BookingPage() {
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                       <div className="space-y-2">
-                        <label className="block text-sm font-bold text-gray-700 flex items-center">
-                          <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <label className="block text-xs sm:text-sm font-bold text-gray-700 flex items-center">
+                          <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                           Full Name *
@@ -644,13 +644,13 @@ export default function BookingPage() {
                           type="text"
                           value={member.name}
                           onChange={(e) => updateTeamMember(index, 'name', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm"
+                          className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm text-sm sm:text-base"
                           placeholder="Enter team member name"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="block text-sm font-bold text-gray-700 flex items-center">
-                          <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <label className="block text-xs sm:text-sm font-bold text-gray-700 flex items-center">
+                          <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                           </svg>
                           Roll Number *
@@ -659,13 +659,13 @@ export default function BookingPage() {
                           type="text"
                           value={member.rollNo}
                           onChange={(e) => updateTeamMember(index, 'rollNo', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm"
+                          className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm text-sm sm:text-base"
                           placeholder="Enter roll number"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="block text-sm font-bold text-gray-700 flex items-center">
-                          <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <label className="block text-xs sm:text-sm font-bold text-gray-700 flex items-center">
+                          <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                           </svg>
                           Department *
@@ -673,7 +673,7 @@ export default function BookingPage() {
                         <select
                           value={member.department}
                           onChange={(e) => updateTeamMember(index, 'department', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm"
+                          className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm text-sm sm:text-base"
                         >
                           <option value="">Select Department</option>
                           <option value="CSE">CSE</option>
@@ -687,8 +687,8 @@ export default function BookingPage() {
                         </select>
                       </div>
                       <div className="space-y-2">
-                        <label className="block text-sm font-bold text-gray-700 flex items-center">
-                          <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <label className="block text-xs sm:text-sm font-bold text-gray-700 flex items-center">
+                          <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                           Year *
@@ -696,7 +696,7 @@ export default function BookingPage() {
                         <select
                           value={member.year}
                           onChange={(e) => updateTeamMember(index, 'year', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm"
+                          className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm text-sm sm:text-base"
                         >
                           <option value="">Select Year</option>
                           <option value="1">1st Year</option>
@@ -709,10 +709,10 @@ export default function BookingPage() {
                   </div>
                 ))}
                 
-                <div className="flex justify-center sticky bottom-0 bg-white/95 backdrop-blur-sm pt-6 border-t border-gray-200">
+                <div className="flex justify-center sticky bottom-0 bg-white/95 backdrop-blur-sm pt-4 sm:pt-6 border-t border-gray-200">
                   <button
                     onClick={addTeamMember}
-                    className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+                    className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
                   >
                     <span className="mr-2">➕</span>
                     Add Team Member
@@ -722,24 +722,24 @@ export default function BookingPage() {
               
               {teamMembers.length > 3 && (
                 <div className="text-center mt-4">
-                  <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50 rounded-full">
+                  <div className="inline-flex items-center px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50 rounded-full">
                     <span className="w-2 h-2 bg-amber-500 rounded-full mr-2"></span>
-                    <p className="text-sm text-amber-700 font-medium">Scroll up to see more team members</p>
+                    <p className="text-xs sm:text-sm text-amber-700 font-medium">Scroll up to see more team members</p>
                   </div>
                 </div>
               )}
               
-              <div className="flex justify-center gap-6 mt-8">
+              <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 mt-6 sm:mt-8">
                 <button
                   onClick={handleProfileSkip}
-                  className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
                 >
                   <span className="mr-2">⏭️</span>
                   Skip for Now
                 </button>
                 <button
                   onClick={handleProfileComplete}
-                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
                 >
                   <span className="mr-2">✅</span>
                   Complete Profile

@@ -517,10 +517,10 @@ export default function AdminDashboard() {
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-lg shadow-xl border-b border-white/20 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 sm:py-6 gap-4">
             <div className="flex items-center">
               <Link href="/" className="flex items-center group">
-                <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-blue-500 to-purple-600 p-1 group-hover:scale-105 transition-transform duration-300">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-blue-500 to-purple-600 p-1 group-hover:scale-105 transition-transform duration-300">
                   <Image
                     src="/irp-logo.jpg"
                     alt="IRP Logo"
@@ -529,34 +529,38 @@ export default function AdminDashboard() {
                     className="w-full h-full object-contain rounded-xl"
                   />
                 </div>
-                <div className="ml-4">
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                <div className="ml-3 sm:ml-4">
+                  <h1 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                     IRP Admin Dashboard
                   </h1>
-                  <p className="text-sm text-gray-500">Booking System Management</p>
+                  <p className="text-xs sm:text-sm text-gray-500">Booking System Management</p>
                 </div>
               </Link>
             </div>
-            <div className="flex items-center gap-4">
-              <div className={`px-4 py-2 rounded-full text-sm font-bold shadow-lg ${
-                systemActive 
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' 
-                  : 'bg-gradient-to-r from-red-500 to-pink-500 text-white'
-              }`}>
-                <span className="mr-2">{systemActive ? '✅' : '❌'}</span>
-                {systemActive ? 'System Active' : 'System Inactive'}
-              </div>
-              {timerActive && (
-                <div className="px-4 py-2 rounded-full text-sm font-bold bg-gradient-to-r from-orange-500 to-yellow-500 text-white shadow-lg">
-                  <span className="mr-2">⏰</span>
-                  Auto-deactivate in: {formatTimeRemaining(timeRemaining)}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+              <div className="flex flex-wrap gap-2 sm:gap-4">
+                <div className={`px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg ${
+                  systemActive 
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' 
+                    : 'bg-gradient-to-r from-red-500 to-pink-500 text-white'
+                }`}>
+                  <span className="mr-1 sm:mr-2">{systemActive ? '✅' : '❌'}</span>
+                  <span className="hidden sm:inline">{systemActive ? 'System Active' : 'System Inactive'}</span>
+                  <span className="sm:hidden">{systemActive ? 'Active' : 'Inactive'}</span>
                 </div>
-              )}
+                {timerActive && (
+                  <div className="px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-bold bg-gradient-to-r from-orange-500 to-yellow-500 text-white shadow-lg">
+                    <span className="mr-1 sm:mr-2">⏰</span>
+                    <span className="hidden sm:inline">Auto-deactivate in: {formatTimeRemaining(timeRemaining)}</span>
+                    <span className="sm:hidden">{formatTimeRemaining(timeRemaining)}</span>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={handleLogout}
-                className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
+                className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg text-sm sm:text-base"
               >
-                <span className="mr-2">🚪</span>
+                <span className="mr-1 sm:mr-2">🚪</span>
                 Logout
               </button>
             </div>
@@ -567,25 +571,28 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation Tabs */}
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 mb-8 overflow-hidden">
-          <nav className="flex space-x-1 p-2">
+          <nav className="flex flex-wrap sm:flex-nowrap space-x-1 p-2 gap-1 sm:gap-0">
             {[
-              { id: 'overview', name: 'Overview', icon: '📊', color: 'from-blue-500 to-cyan-500' },
-              { id: 'bookings', name: 'All Bookings', icon: '📅', color: 'from-green-500 to-emerald-500' },
-              { id: 'slots', name: 'Visual Slots', icon: '🎯', color: 'from-purple-500 to-pink-500' },
-              { id: 'settings', name: 'System Settings', icon: '⚙️', color: 'from-orange-500 to-red-500' },
-              { id: 'password', name: 'Change Password', icon: '🔒', color: 'from-gray-500 to-slate-500' }
+              { id: 'overview', name: 'Overview', shortName: 'Overview', icon: '📊', color: 'from-blue-500 to-cyan-500' },
+              { id: 'bookings', name: 'All Bookings', shortName: 'Bookings', icon: '📅', color: 'from-green-500 to-emerald-500' },
+              { id: 'slots', name: 'Visual Slots', shortName: 'Slots', icon: '🎯', color: 'from-purple-500 to-pink-500' },
+              { id: 'settings', name: 'System Settings', shortName: 'Settings', icon: '⚙️', color: 'from-orange-500 to-red-500' },
+              { id: 'password', name: 'Change Password', shortName: 'Password', icon: '🔒', color: 'from-gray-500 to-slate-500' }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 py-4 px-6 rounded-xl font-bold text-sm transition-all duration-300 transform hover:scale-105 ${
+                className={`flex-1 sm:flex-none py-3 sm:py-4 px-3 sm:px-6 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 transform hover:scale-105 ${
                   activeTab === tab.id
                     ? `bg-gradient-to-r ${tab.color} text-white shadow-lg`
                     : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
                 }`}
               >
-                <span className="mr-2 text-lg">{tab.icon}</span>
-                {tab.name}
+                <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
+                  <span className="text-sm sm:text-lg">{tab.icon}</span>
+                  <span className="hidden sm:inline">{tab.name}</span>
+                  <span className="sm:hidden text-xs">{tab.shortName}</span>
+                </div>
               </button>
             ))}
           </nav>
@@ -601,78 +608,82 @@ export default function AdminDashboard() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  <div className="bg-gradient-to-br from-blue-500 to-cyan-500 p-8 rounded-2xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+                  <div className="bg-gradient-to-br from-blue-500 to-cyan-500 p-6 sm:p-8 rounded-2xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-blue-100 text-sm font-bold uppercase tracking-wider">Total Bookings</p>
-                        <p className="text-4xl font-bold mt-2">{bookings.length}</p>
-                        <p className="text-blue-200 text-sm mt-1">All time bookings</p>
+                        <p className="text-blue-100 text-xs sm:text-sm font-bold uppercase tracking-wider">Total Bookings</p>
+                        <p className="text-3xl sm:text-4xl font-bold mt-2">{bookings.length}</p>
+                        <p className="text-blue-200 text-xs sm:text-sm mt-1">All time bookings</p>
                       </div>
-                      <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-                        <span className="text-3xl">📅</span>
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                        <span className="text-2xl sm:text-3xl">📅</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className={`p-8 rounded-2xl shadow-xl text-white transform hover:scale-105 transition-all duration-300 ${
+                  <div className={`p-6 sm:p-8 rounded-2xl shadow-xl text-white transform hover:scale-105 transition-all duration-300 ${
                     systemActive 
                       ? 'bg-gradient-to-br from-green-500 to-emerald-500' 
                       : 'bg-gradient-to-br from-red-500 to-pink-500'
                   }`}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-white/80 text-sm font-bold uppercase tracking-wider">System Status</p>
-                        <p className="text-4xl font-bold mt-2">{systemActive ? 'Active' : 'Inactive'}</p>
-                        <p className="text-white/80 text-sm mt-1">
-                          {systemActive ? 'System is running' : 'System is disabled'}
+                        <p className="text-white/80 text-xs sm:text-sm font-bold uppercase tracking-wider">System Status</p>
+                        <p className="text-3xl sm:text-4xl font-bold mt-2">{systemActive ? 'Active' : 'Inactive'}</p>
+                        <p className="text-white/80 text-xs sm:text-sm mt-1">
+                          <span className="hidden sm:inline">{systemActive ? 'System is running' : 'System is disabled'}</span>
+                          <span className="sm:hidden">{systemActive ? 'Running' : 'Disabled'}</span>
                         </p>
                       </div>
-                      <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-                        <span className="text-3xl">{systemActive ? '✅' : '❌'}</span>
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                        <span className="text-2xl sm:text-3xl">{systemActive ? '✅' : '❌'}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-8 rounded-2xl shadow-xl text-white transform hover:scale-105 transition-all duration-300">
+                  <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-6 sm:p-8 rounded-2xl shadow-xl text-white transform hover:scale-105 transition-all duration-300 sm:col-span-2 lg:col-span-1">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-purple-100 text-sm font-bold uppercase tracking-wider">Unique Users</p>
-                        <p className="text-4xl font-bold mt-2">
+                        <p className="text-purple-100 text-xs sm:text-sm font-bold uppercase tracking-wider">Unique Users</p>
+                        <p className="text-3xl sm:text-4xl font-bold mt-2">
                           {new Set(bookings.map(b => b.user.rollNo)).size}
                         </p>
-                        <p className="text-purple-200 text-sm mt-1">Registered students</p>
+                        <p className="text-purple-200 text-xs sm:text-sm mt-1">
+                          <span className="hidden sm:inline">Registered students</span>
+                          <span className="sm:hidden">Students</span>
+                        </p>
                       </div>
-                      <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-                        <span className="text-3xl">👥</span>
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                        <span className="text-2xl sm:text-3xl">👥</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-4 sm:p-8">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                    <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                       Recent Bookings
                     </h3>
-                    <div className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full text-sm font-bold">
+                    <div className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-full text-sm font-bold self-start sm:self-auto">
                       {bookings.slice(0, 5).length} Recent
                     </div>
                   </div>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto -mx-4 sm:mx-0">
                     <table className="min-w-full">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                          <th className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                             User Details
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                          <th className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider hidden sm:table-cell">
                             Slot Information
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                          <th className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider hidden lg:table-cell">
                             Project Details
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                          <th className="px-4 sm:px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider hidden md:table-cell">
                             Booked At
                           </th>
                         </tr>
@@ -684,22 +695,25 @@ export default function AdminDashboard() {
                             className="hover:bg-blue-50 cursor-pointer transition-all duration-200 hover:shadow-md"
                             onClick={() => handleBookingClick(booking)}
                           >
-                            <td className="px-6 py-6 whitespace-nowrap">
+                            <td className="px-4 sm:px-6 py-6">
                               <div className="flex items-center">
-                                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-4">
+                                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3 sm:mr-4">
                                   {booking.user.name.charAt(0)}
                                 </div>
-                                <div>
-                                  <div className="text-sm font-bold text-gray-900">
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-bold text-gray-900 truncate">
                                     {booking.user.name}
                                   </div>
-                                  <div className="text-sm text-gray-500">
+                                  <div className="text-xs sm:text-sm text-gray-500 truncate">
                                     {booking.user.rollNo} • {booking.user.department}
+                                  </div>
+                                  <div className="text-xs text-gray-400 sm:hidden mt-1">
+                                    {formatDate(booking.slotDate)} • {booking.slotTime}
                                   </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-6 whitespace-nowrap">
+                            <td className="px-4 sm:px-6 py-6 whitespace-nowrap hidden sm:table-cell">
                               <div className="text-sm font-medium text-gray-900">
                                 {formatDate(booking.slotDate)}
                               </div>
@@ -707,12 +721,12 @@ export default function AdminDashboard() {
                                 {booking.slotTime}
                               </div>
                             </td>
-                            <td className="px-6 py-6 whitespace-nowrap">
+                            <td className="px-4 sm:px-6 py-6 whitespace-nowrap hidden lg:table-cell">
                               <div className="text-sm font-medium text-gray-900">
                                 {booking.projectName}
                               </div>
                             </td>
-                            <td className="px-6 py-6 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-4 sm:px-6 py-6 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
                               {formatDate(booking.createdAt)}
                             </td>
                           </tr>
@@ -894,39 +908,40 @@ export default function AdminDashboard() {
         {/* Settings Tab */}
         {activeTab === 'settings' && (
           <div className="space-y-8">
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
-              <div className="flex items-center mb-8">
-                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mr-4">
-                  <span className="text-2xl">⚙️</span>
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-4 sm:p-8">
+              <div className="flex flex-col sm:flex-row sm:items-center mb-6 sm:mb-8 gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mr-0 sm:mr-4">
+                  <span className="text-xl sm:text-2xl">⚙️</span>
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                  <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                     System Control
                   </h3>
-                  <p className="text-gray-600">Manage system settings and controls</p>
+                  <p className="text-sm sm:text-base text-gray-600">Manage system settings and controls</p>
                 </div>
               </div>
               
-              <div className="space-y-8">
-                <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-6">
-                  <div className="flex items-center justify-between">
+              <div className="space-y-6 sm:space-y-8">
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex-1">
-                      <h4 className="text-lg font-bold text-gray-900 mb-2">System Status</h4>
-                      <p className="text-gray-600 mb-4">
+                      <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-2">System Status</h4>
+                      <p className="text-sm sm:text-base text-gray-600 mb-4">
                         Control whether users can book slots in the system
                       </p>
-                      <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-bold ${
+                      <div className={`inline-flex items-center px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-bold ${
                         systemActive 
                           ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' 
                           : 'bg-gradient-to-r from-red-500 to-pink-500 text-white'
                       }`}>
-                        <span className="mr-2">{systemActive ? '✅' : '❌'}</span>
-                        {systemActive ? 'System is Active' : 'System is Inactive'}
+                        <span className="mr-1 sm:mr-2">{systemActive ? '✅' : '❌'}</span>
+                        <span className="hidden sm:inline">{systemActive ? 'System is Active' : 'System is Inactive'}</span>
+                        <span className="sm:hidden">{systemActive ? 'System Active' : 'System Inactive'}</span>
                       </div>
                     </div>
                     <button
                       onClick={handleSystemToggle}
-                      className={`relative inline-flex h-8 w-16 items-center rounded-full transition-all duration-300 transform hover:scale-105 ${
+                      className={`relative inline-flex h-8 w-16 items-center rounded-full transition-all duration-300 transform hover:scale-105 flex-shrink-0 ${
                         systemActive ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-gray-400 to-gray-500'
                       }`}
                     >
@@ -939,42 +954,42 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6">
-                  <div className="flex items-center mb-4">
-                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mr-3">
-                      <span className="text-xl">⏰</span>
+                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center mb-4 gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mr-0 sm:mr-3">
+                      <span className="text-lg sm:text-xl">⏰</span>
                     </div>
                     <div>
-                      <h4 className="text-lg font-bold text-gray-900">Auto Deactivate Timer</h4>
-                      <p className="text-gray-600">Set a timer to automatically deactivate the system</p>
+                      <h4 className="text-base sm:text-lg font-bold text-gray-900">Auto Deactivate Timer</h4>
+                      <p className="text-sm sm:text-base text-gray-600">Set a timer to automatically deactivate the system</p>
                     </div>
                   </div>
                   
                   {timerActive ? (
                     <div className="space-y-4">
-                      <div className="bg-gradient-to-r from-orange-500 to-yellow-500 rounded-2xl p-6 text-white">
-                        <div className="flex items-center justify-between">
+                      <div className="bg-gradient-to-r from-orange-500 to-yellow-500 rounded-2xl p-4 sm:p-6 text-white">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div>
-                            <p className="text-orange-100 text-sm font-bold uppercase tracking-wider">Timer Active</p>
-                            <p className="text-3xl font-bold mt-2">
+                            <p className="text-orange-100 text-xs sm:text-sm font-bold uppercase tracking-wider">Timer Active</p>
+                            <p className="text-2xl sm:text-3xl font-bold mt-2">
                               {formatTimeRemaining(timeRemaining)}
                             </p>
-                            <p className="text-orange-100 text-sm mt-1">
+                            <p className="text-orange-100 text-xs sm:text-sm mt-1">
                               System will deactivate automatically
                             </p>
                           </div>
-                          <div className="text-4xl">⏰</div>
+                          <div className="text-3xl sm:text-4xl">⏰</div>
                         </div>
                       </div>
                       <button
                         onClick={handleCancelTimer}
-                        className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
+                        className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
                       >
                         Cancel Timer
                       </button>
                     </div>
                   ) : (
-                    <div className="flex gap-4">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                       <input
                         type="number"
                         value={autoDeactivate}
@@ -985,7 +1000,7 @@ export default function AdminDashboard() {
                       />
                       <button
                         onClick={handleAutoDeactivate}
-                        className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-8 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
+                        className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-6 sm:px-8 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
                       >
                         Set Timer
                       </button>
@@ -1096,24 +1111,24 @@ export default function AdminDashboard() {
 
         {/* Booking Detail Modal */}
         {showBookingDetail && selectedBooking && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white/95 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 p-4 sm:p-8 w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
               {/* Header */}
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-4">
                 <div className="flex items-center">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mr-4">
-                    <span className="text-2xl">📋</span>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mr-3 sm:mr-4">
+                    <span className="text-xl sm:text-2xl">📋</span>
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                    <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
                       Booking Details
                     </h3>
-                    <p className="text-gray-600">Complete information about this booking</p>
+                    <p className="text-sm sm:text-base text-gray-600">Complete information about this booking</p>
                   </div>
                 </div>
                 <button
                   onClick={closeBookingDetail}
-                  className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors duration-200"
+                  className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-xl flex items-center justify-center transition-colors duration-200 self-end sm:self-auto"
                 >
                   <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1122,84 +1137,84 @@ export default function AdminDashboard() {
               </div>
 
               {/* Booking Information */}
-              <div className="space-y-8">
+              <div className="space-y-6 sm:space-y-8">
                 {/* User Information */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-4 sm:p-6">
+                  <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                     User Information
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Full Name</label>
-                      <p className="text-lg font-semibold text-gray-900">{selectedBooking.user.name}</p>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Full Name</label>
+                      <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedBooking.user.name}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Roll Number</label>
-                      <p className="text-lg font-semibold text-gray-900">{selectedBooking.user.rollNo}</p>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Roll Number</label>
+                      <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedBooking.user.rollNo}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Department</label>
-                      <p className="text-lg font-semibold text-gray-900">{selectedBooking.user.department}</p>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Department</label>
+                      <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedBooking.user.department}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Email</label>
-                      <p className="text-lg font-semibold text-gray-900">{selectedBooking.user.email}</p>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Email</label>
+                      <p className="text-base sm:text-lg font-semibold text-gray-900 break-all">{selectedBooking.user.email}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Slot Information */}
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-4 sm:p-6">
+                  <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     Slot Information
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Date</label>
-                      <p className="text-lg font-semibold text-gray-900">{formatDate(selectedBooking.slotDate)}</p>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Date</label>
+                      <p className="text-base sm:text-lg font-semibold text-gray-900">{formatDate(selectedBooking.slotDate)}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Time</label>
-                      <p className="text-lg font-semibold text-gray-900">{selectedBooking.slotTime}</p>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Time</label>
+                      <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedBooking.slotTime}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Booking ID</label>
-                      <p className="text-lg font-semibold text-gray-900 font-mono">{selectedBooking.id}</p>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Booking ID</label>
+                      <p className="text-base sm:text-lg font-semibold text-gray-900 font-mono text-xs sm:text-base break-all">{selectedBooking.id}</p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Booked At</label>
-                      <p className="text-lg font-semibold text-gray-900">{formatDate(selectedBooking.createdAt)}</p>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Booked At</label>
+                      <p className="text-base sm:text-lg font-semibold text-gray-900">{formatDate(selectedBooking.createdAt)}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Project Information */}
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-4 sm:p-6">
+                  <h4 className="text-base sm:text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
                     Project Information
                   </h4>
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Project Name</label>
-                      <p className="text-lg font-semibold text-gray-900">{selectedBooking.projectName}</p>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Project Name</label>
+                      <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedBooking.projectName}</p>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">Team Lead Name</label>
-                        <p className="text-lg font-semibold text-gray-900">{selectedBooking.teamLeadName}</p>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Team Lead Name</label>
+                        <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedBooking.teamLeadName}</p>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-600 mb-1">Team Lead Roll No</label>
-                        <p className="text-lg font-semibold text-gray-900">{selectedBooking.teamLeadRollNo}</p>
+                        <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Team Lead Roll No</label>
+                        <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedBooking.teamLeadRollNo}</p>
                       </div>
                     </div>
                   </div>
@@ -1207,10 +1222,10 @@ export default function AdminDashboard() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
                 <button
                   onClick={closeBookingDetail}
-                  className="bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg text-sm sm:text-base"
                 >
                   Close
                 </button>
@@ -1219,7 +1234,7 @@ export default function AdminDashboard() {
                     removeBooking(selectedBooking.id)
                     closeBookingDetail()
                   }}
-                  className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
+                  className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg text-sm sm:text-base"
                 >
                   <span className="mr-2">🗑️</span>
                   Remove Booking
