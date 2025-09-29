@@ -181,13 +181,26 @@ export default function BookingPage() {
 
   // Check if current time is within enrollment window for a specific date
   const isWithinEnrollmentWindow = (date: string) => {
+    const now = new Date()
+    const today = now.toISOString().split('T')[0]
+    const currentTime = now.toTimeString().slice(0, 5) // HH:MM format
+    
+    // Check global enrollment window first
+    if (systemConfig.globalEnrollmentStart && systemConfig.globalEnrollmentEnd) {
+      if (date === today) {
+        // If it's today, check global time window
+        return currentTime >= systemConfig.globalEnrollmentStart && currentTime <= systemConfig.globalEnrollmentEnd
+      } else {
+        // If it's not today, check if it's a future date
+        return new Date(date) > now
+      }
+    }
+    
+    // Check date-specific enrollment window
     const enrollmentTime = systemConfig.enrollmentTimes[date]
     if (!enrollmentTime || !enrollmentTime.startTime || !enrollmentTime.endTime) {
       return true // Always available if no enrollment window set
     }
-    
-    const now = new Date()
-    const today = now.toISOString().split('T')[0]
     
     // If it's not the enrollment date, check if it's before the date
     if (date !== today) {
@@ -195,7 +208,6 @@ export default function BookingPage() {
     }
     
     // If it's the enrollment date, check the time window
-    const currentTime = now.toTimeString().slice(0, 5) // HH:MM format
     return currentTime >= enrollmentTime.startTime && currentTime <= enrollmentTime.endTime
   }
 
@@ -1080,46 +1092,67 @@ export default function BookingPage() {
             <p className="text-sm text-gray-500 max-w-2xl mx-auto mb-4">{systemConfig.eventDescription}</p>
             
             {/* Enrollment Time Windows Info */}
-            {systemConfig.enrollmentTimes && Object.keys(systemConfig.enrollmentTimes).length > 0 && (
+            {(systemConfig.globalEnrollmentStart && systemConfig.globalEnrollmentEnd) || 
+             (systemConfig.enrollmentTimes && Object.keys(systemConfig.enrollmentTimes).length > 0) ? (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 max-w-2xl mx-auto">
                 <div className="flex items-center justify-center mb-2">
                   <span className="text-blue-600 mr-2">🕐</span>
-                  <h4 className="text-sm font-semibold text-blue-800">Enrollment Windows</h4>
+                  <h4 className="text-sm font-semibold text-blue-800">
+                    {systemConfig.globalEnrollmentStart && systemConfig.globalEnrollmentEnd ? 'Global Enrollment Window' : 'Enrollment Windows'}
+                  </h4>
                 </div>
                 <div className="text-xs text-blue-700 space-y-1">
-                  {systemConfig.eventDates.map(date => {
-                    const enrollmentTime = systemConfig.enrollmentTimes[date]
-                    const isOpen = isWithinEnrollmentWindow(date)
-                    
-                    if (!enrollmentTime || !enrollmentTime.startTime || !enrollmentTime.endTime) {
-                      return null
-                    }
-                    
-                    return (
-                      <div key={date} className="flex items-center justify-between">
-                        <span>{new Date(date).toLocaleDateString('en-US', { 
-                          weekday: 'short', 
-                          month: 'short', 
-                          day: 'numeric' 
-                        })}:</span>
-                        <div className="flex items-center">
-                          <span className="mr-2">
-                            {enrollmentTime.startTime} - {enrollmentTime.endTime}
-                          </span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            isOpen 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {isOpen ? 'Open' : 'Closed'}
-                          </span>
-                        </div>
+                  {systemConfig.globalEnrollmentStart && systemConfig.globalEnrollmentEnd ? (
+                    <div className="text-center">
+                      <div className="flex items-center justify-center">
+                        <span className="mr-2">
+                          {systemConfig.globalEnrollmentStart} - {systemConfig.globalEnrollmentEnd}
+                        </span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          isWithinEnrollmentWindow(new Date().toISOString().split('T')[0])
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {isWithinEnrollmentWindow(new Date().toISOString().split('T')[0]) ? 'Open' : 'Closed'}
+                        </span>
                       </div>
-                    )
-                  })}
+                      <p className="text-blue-600 mt-1">Applied to all dates</p>
+                    </div>
+                  ) : (
+                    systemConfig.eventDates.map(date => {
+                      const enrollmentTime = systemConfig.enrollmentTimes[date]
+                      const isOpen = isWithinEnrollmentWindow(date)
+                      
+                      if (!enrollmentTime || !enrollmentTime.startTime || !enrollmentTime.endTime) {
+                        return null
+                      }
+                      
+                      return (
+                        <div key={date} className="flex items-center justify-between">
+                          <span>{new Date(date).toLocaleDateString('en-US', { 
+                            weekday: 'short', 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })}:</span>
+                          <div className="flex items-center">
+                            <span className="mr-2">
+                              {enrollmentTime.startTime} - {enrollmentTime.endTime}
+                            </span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              isOpen 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {isOpen ? 'Open' : 'Closed'}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
                 </div>
               </div>
-            )}
+            ) : null}
             {userHasBooking ? (
               <div className="bg-blue-100 border border-blue-300 rounded-lg p-4 mb-4">
                 <p className="text-blue-800 font-medium">You already have a booking!</p>

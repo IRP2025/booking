@@ -1020,9 +1020,9 @@ export default function AdminDashboard() {
                     </div>
                     <button
                       onClick={() => {
-                        const newDate = new Date()
-                        newDate.setDate(newDate.getDate() + systemConfig.eventDates.length)
-                        const dateString = newDate.toISOString().split('T')[0]
+                        // Get today's date
+                        const today = new Date()
+                        const dateString = today.toISOString().split('T')[0]
                         
                         // Create default slots for the new date
                         const defaultSlots = [
@@ -1045,7 +1045,19 @@ export default function AdminDashboard() {
                           }
                         })
                         
-                        // Don't auto-expand the new date - let user click to expand
+                        // Auto-expand the new date and scroll to it
+                        setExpandedDates(prev => ({
+                          ...prev,
+                          [dateString]: true
+                        }))
+                        
+                        // Scroll to the time slots section after a short delay
+                        setTimeout(() => {
+                          const timeSlotsSection = document.querySelector('[data-section="time-slots"]')
+                          if (timeSlotsSection) {
+                            timeSlotsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                          }
+                        }, 100)
                       }}
                       className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 shadow-lg text-sm sm:text-base w-full sm:w-auto"
                     >
@@ -1105,7 +1117,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Date-Specific Time Slots */}
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-4 sm:p-6">
+                <div data-section="time-slots" className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-4 sm:p-6">
                   <div className="flex items-center mb-6">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mr-3">
                       <span className="text-lg sm:text-xl">⏰</span>
@@ -1558,55 +1570,83 @@ export default function AdminDashboard() {
                 <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center mb-4 gap-3">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mr-0 sm:mr-3">
-                      <span className="text-lg sm:text-xl">⏰</span>
+                      <span className="text-lg sm:text-xl">🕐</span>
                     </div>
                     <div>
-                      <h4 className="text-base sm:text-lg font-bold text-gray-900">Auto Deactivate Timer</h4>
-                      <p className="text-sm sm:text-base text-gray-600">Set a timer to automatically deactivate the system</p>
+                      <h4 className="text-base sm:text-lg font-bold text-gray-900">Global Enrollment Window</h4>
+                      <p className="text-sm sm:text-base text-gray-600">Set a global time window when users can book slots</p>
                     </div>
                   </div>
                   
-                  {timerActive ? (
-                    <div className="space-y-4">
-                      <div className="bg-gradient-to-r from-orange-500 to-yellow-500 rounded-2xl p-4 sm:p-6 text-white">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div>
-                            <p className="text-orange-100 text-xs sm:text-sm font-bold uppercase tracking-wider">Timer Active</p>
-                            <p className="text-2xl sm:text-3xl font-bold mt-2">
-                              {formatTimeRemaining(timeRemaining)}
-                            </p>
-                            <p className="text-orange-100 text-xs sm:text-sm mt-1">
-                              System will deactivate automatically
-                            </p>
-                          </div>
-                          <div className="text-3xl sm:text-4xl">⏰</div>
-                        </div>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
+                        <input
+                          type="time"
+                          value={systemConfig.globalEnrollmentStart || ''}
+                          onChange={(e) => setSystemConfig({
+                            ...systemConfig,
+                            globalEnrollmentStart: e.target.value
+                          })}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-medium"
+                        />
                       </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">End Time</label>
+                        <input
+                          type="time"
+                          value={systemConfig.globalEnrollmentEnd || ''}
+                          onChange={(e) => setSystemConfig({
+                            ...systemConfig,
+                            globalEnrollmentEnd: e.target.value
+                          })}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-medium"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>💡 How it works:</strong> This sets a global time window for all dates. 
+                        If set, users can only book slots during this time window on any day.
+                        Leave empty to allow booking at any time.
+                      </p>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={handleCancelTimer}
-                        className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
+                        onClick={() => setSystemConfig({
+                          ...systemConfig,
+                          globalEnrollmentStart: '16:00',
+                          globalEnrollmentEnd: '18:00'
+                        })}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
                       >
-                        Cancel Timer
+                        Set 4:00-6:00 PM
+                      </button>
+                      <button
+                        onClick={() => setSystemConfig({
+                          ...systemConfig,
+                          globalEnrollmentStart: '09:00',
+                          globalEnrollmentEnd: '12:00'
+                        })}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                      >
+                        Set 9:00-12:00 AM
+                      </button>
+                      <button
+                        onClick={() => setSystemConfig({
+                          ...systemConfig,
+                          globalEnrollmentStart: '',
+                          globalEnrollmentEnd: ''
+                        })}
+                        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                      >
+                        Clear (Always Available)
                       </button>
                     </div>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                      <input
-                        type="number"
-                        value={autoDeactivate}
-                        onChange={(e) => setAutoDeactivate(e.target.value)}
-                        placeholder="Enter minutes"
-                        min="1"
-                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-medium"
-                      />
-                      <button
-                        onClick={handleAutoDeactivate}
-                        className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-6 sm:px-8 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
-                      >
-                        Set Timer
-                      </button>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
