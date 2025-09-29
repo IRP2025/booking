@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { getSystemConfig, saveSystemConfig, SystemConfig, defaultSystemConfig } from '@/lib/systemConfig'
 
 interface Booking {
   id: string
@@ -17,7 +18,6 @@ interface Booking {
   slotDate: string
   slotTime: string
   projectName: string
-  venue: string
   teamLeadName: string
   teamLeadRollNo: string
   createdAt: string
@@ -45,6 +45,12 @@ export default function AdminDashboard() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [showBookingDetail, setShowBookingDetail] = useState(false)
 
+  // Customization system state
+  const [systemConfig, setSystemConfig] = useState<SystemConfig>(defaultSystemConfig)
+  const [configLoading, setConfigLoading] = useState(false)
+  const [configSaved, setConfigSaved] = useState(false)
+  const [expandedDates, setExpandedDates] = useState<{ [date: string]: boolean }>({})
+
   // Fetch real bookings data from Supabase
   const fetchBookings = async () => {
     try {
@@ -63,8 +69,7 @@ export default function AdminDashboard() {
             email,
             team_lead_name,
             team_lead_roll_no,
-            project_name,
-            venue
+            project_name
           )
         `)
         .order('created_at', { ascending: false })
@@ -85,7 +90,6 @@ export default function AdminDashboard() {
         slotDate: booking.slot_date,
         slotTime: booking.slot_time,
         projectName: (booking.users as any)?.project_name || '',
-        venue: (booking.users as any)?.venue || '',
         teamLeadName: (booking.users as any)?.team_lead_name || '',
         teamLeadRollNo: (booking.users as any)?.team_lead_roll_no || '',
         createdAt: booking.created_at
@@ -104,13 +108,8 @@ export default function AdminDashboard() {
     try {
       setAdminLoading(true)
       
-      const dates = ['2025-10-06', '2025-10-07', '2025-10-08', '2025-10-09', '2025-10-10']
-      const times = [
-        { id: '1', time: '1:45 PM - 2:15 PM' },
-        { id: '2', time: '2:15 PM - 2:45 PM' },
-        { id: '3', time: '2:45 PM - 3:15 PM' },
-        { id: '4', time: '3:15 PM - 3:45 PM' }
-      ]
+      // Use dynamic configuration instead of hardcoded values
+      const dates = systemConfig.eventDates
 
       // Get all bookings
       const { data: bookings, error } = await supabase
@@ -143,6 +142,7 @@ export default function AdminDashboard() {
       // Generate all slots with booking status
       const allSlots: any[] = []
       dates.forEach(date => {
+        const times = systemConfig.dateSpecificSlots[date] || []
         times.forEach(time => {
           const key = `${date}-${time.time}`
           const bookingInfo = bookedSlots.get(key)
@@ -476,6 +476,47 @@ export default function AdminDashboard() {
     }
   }
 
+  // Save configuration function
+  const handleSaveConfig = async () => {
+    try {
+      setConfigLoading(true)
+      setConfigSaved(false)
+
+      // Save configuration using utility function
+      saveSystemConfig(systemConfig)
+      
+      // Trigger storage event to notify other tabs
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'systemConfig',
+        newValue: JSON.stringify(systemConfig)
+      }))
+      
+      // Show success message
+      setConfigSaved(true)
+      setTimeout(() => setConfigSaved(false), 3000)
+      
+      console.log('Configuration saved:', systemConfig)
+    } catch (error) {
+      console.error('Error saving configuration:', error)
+      alert('Failed to save configuration. Please try again.')
+    } finally {
+      setConfigLoading(false)
+    }
+  }
+
+  // Load configuration on component mount
+  useEffect(() => {
+    setSystemConfig(getSystemConfig())
+  }, [])
+
+  // Toggle date expansion
+  const toggleDateExpansion = (date: string) => {
+    setExpandedDates(prev => ({
+      ...prev,
+      [date]: !prev[date]
+    }))
+  }
+
   // Cancel timer function
   const handleCancelTimer = async () => {
     try {
@@ -579,6 +620,7 @@ export default function AdminDashboard() {
               { id: 'overview', name: 'Overview', shortName: 'Overview', icon: '📊', color: 'from-blue-500 to-cyan-500' },
               { id: 'bookings', name: 'All Bookings', shortName: 'Bookings', icon: '📅', color: 'from-green-500 to-emerald-500' },
               { id: 'slots', name: 'Visual Slots', shortName: 'Slots', icon: '🎯', color: 'from-purple-500 to-pink-500' },
+              { id: 'customize', name: 'Customize', shortName: 'Customize', icon: '🎨', color: 'from-indigo-500 to-purple-500' },
               { id: 'settings', name: 'System Settings', shortName: 'Settings', icon: '⚙️', color: 'from-orange-500 to-red-500' },
               { id: 'password', name: 'Change Password', shortName: 'Password', icon: '🔒', color: 'from-gray-500 to-slate-500' }
             ].map(tab => (
@@ -808,9 +850,6 @@ export default function AdminDashboard() {
                         <div className="text-sm text-gray-500">
                           Lead: {booking.teamLeadName} ({booking.teamLeadRollNo})
                         </div>
-                        <div className="text-sm text-blue-600 font-medium">
-                          Venue: {booking.venue}
-                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
@@ -908,6 +947,388 @@ export default function AdminDashboard() {
                 </div>
               </>
             )}
+          </div>
+        )}
+
+        {/* Customize Tab */}
+        {activeTab === 'customize' && (
+          <div className="space-y-8">
+            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-4 sm:p-8">
+              <div className="flex flex-col sm:flex-row sm:items-center mb-6 sm:mb-8 gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mr-0 sm:mr-4">
+                  <span className="text-xl sm:text-2xl">🎨</span>
+                </div>
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    System Customization
+                  </h3>
+                  <p className="text-sm sm:text-base text-gray-600">Customize event details, dates, time slots, and instructions</p>
+                </div>
+              </div>
+
+              <div className="space-y-6 sm:space-y-8">
+                {/* Event Details */}
+                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-4 sm:p-6">
+                  <div className="flex items-center mb-6">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mr-3">
+                      <span className="text-lg sm:text-xl">📝</span>
+                    </div>
+                    <h4 className="text-lg sm:text-xl font-bold text-gray-900">Event Details</h4>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Event Title</label>
+                      <input
+                        type="text"
+                        value={systemConfig.eventTitle}
+                        onChange={(e) => setSystemConfig({...systemConfig, eventTitle: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        placeholder="Enter event title"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Event Subtitle</label>
+                      <input
+                        type="text"
+                        value={systemConfig.eventSubtitle}
+                        onChange={(e) => setSystemConfig({...systemConfig, eventSubtitle: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        placeholder="Enter event subtitle"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Event Description</label>
+                      <textarea
+                        value={systemConfig.eventDescription}
+                        onChange={(e) => setSystemConfig({...systemConfig, eventDescription: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent h-20 resize-none text-sm"
+                        placeholder="Enter event description"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Event Dates */}
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mr-3">
+                        <span className="text-lg sm:text-xl">📅</span>
+                      </div>
+                      <h4 className="text-lg sm:text-xl font-bold text-gray-900">Event Dates</h4>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newDate = new Date()
+                        newDate.setDate(newDate.getDate() + systemConfig.eventDates.length)
+                        const dateString = newDate.toISOString().split('T')[0]
+                        
+                        // Create default slots for the new date
+                        const defaultSlots = [
+                          { id: '1', time: '1:45 PM - 2:15 PM' },
+                          { id: '2', time: '2:15 PM - 2:45 PM' },
+                          { id: '3', time: '2:45 PM - 3:15 PM' },
+                          { id: '4', time: '3:15 PM - 3:45 PM' }
+                        ]
+                        
+                        setSystemConfig({
+                          ...systemConfig,
+                          eventDates: [...systemConfig.eventDates, dateString],
+                          dateSpecificSlots: {
+                            ...systemConfig.dateSpecificSlots,
+                            [dateString]: defaultSlots
+                          }
+                        })
+                      }}
+                      className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 shadow-lg text-sm sm:text-base w-full sm:w-auto"
+                    >
+                      + Add Date
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {systemConfig.eventDates.map((date, index) => (
+                      <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        <div className="flex-1">
+                          <label className="block text-xs text-gray-600 mb-1 sm:hidden">Date</label>
+                          <input
+                            type="date"
+                            value={date}
+                            onChange={(e) => {
+                              const newDates = [...systemConfig.eventDates]
+                              newDates[index] = e.target.value
+                              setSystemConfig({...systemConfig, eventDates: newDates})
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                          />
+                        </div>
+                        <button
+                          onClick={() => {
+                            const dateToRemove = systemConfig.eventDates[index]
+                            const newDates = systemConfig.eventDates.filter((_, i) => i !== index)
+                            const newDateSpecificSlots = { ...systemConfig.dateSpecificSlots }
+                            delete newDateSpecificSlots[dateToRemove]
+                            
+                            setSystemConfig({
+                              ...systemConfig, 
+                              eventDates: newDates,
+                              dateSpecificSlots: newDateSpecificSlots
+                            })
+                          }}
+                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 flex-shrink-0 text-sm"
+                        >
+                          🗑️ Remove
+                        </button>
+                      </div>
+                    ))}
+                    
+                    {systemConfig.eventDates.length === 0 && (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <span className="text-gray-400 text-2xl">📅</span>
+                        </div>
+                        <p className="text-gray-500 text-sm">No event dates configured</p>
+                        <p className="text-gray-400 text-xs mt-1">Click "Add Date" to get started</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Date-Specific Time Slots */}
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-4 sm:p-6">
+                  <div className="flex items-center mb-6">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mr-3">
+                      <span className="text-lg sm:text-xl">⏰</span>
+                    </div>
+                    <h4 className="text-lg sm:text-xl font-bold text-gray-900">Time Slots by Date</h4>
+                  </div>
+                  
+                  <div className="space-y-3 sm:space-y-4">
+                    {systemConfig.eventDates.map((date, dateIndex) => {
+                      const isExpanded = expandedDates[date]
+                      const slotCount = (systemConfig.dateSpecificSlots[date] || []).length
+                      
+                      return (
+                        <div key={date} className="bg-white rounded-xl border border-purple-200 overflow-hidden">
+                          {/* Date Header - Clickable */}
+                          <button
+                            onClick={() => toggleDateExpansion(date)}
+                            className="w-full flex items-center justify-between p-4 sm:p-6 hover:bg-purple-50 transition-colors duration-200"
+                          >
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mr-3">
+                                <span className="text-white text-sm sm:text-base">📅</span>
+                              </div>
+                              <div className="text-left">
+                                <h5 className="font-semibold text-gray-800 text-sm sm:text-base">
+                                  {new Date(date).toLocaleDateString('en-US', { 
+                                    weekday: 'short', 
+                                    month: 'short', 
+                                    day: 'numeric' 
+                                  })}
+                                </h5>
+                                <p className="text-xs sm:text-sm text-gray-500">
+                                  {slotCount} slot{slotCount !== 1 ? 's' : ''} configured
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs sm:text-sm text-gray-500 hidden sm:inline">
+                                {isExpanded ? 'Hide' : 'Show'} slots
+                              </span>
+                              <svg 
+                                className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </button>
+                          
+                          {/* Collapsible Content */}
+                          {isExpanded && (
+                            <div className="border-t border-purple-100 p-4 sm:p-6">
+                              <div className="flex items-center justify-between mb-4">
+                                <h6 className="font-medium text-gray-700 text-sm sm:text-base">
+                                  Configure Time Slots
+                                </h6>
+                                <button
+                                  onClick={() => {
+                                    const dateSlots = systemConfig.dateSpecificSlots[date] || []
+                                    const newId = (dateSlots.length + 1).toString()
+                                    setSystemConfig({
+                                      ...systemConfig,
+                                      dateSpecificSlots: {
+                                        ...systemConfig.dateSpecificSlots,
+                                        [date]: [...dateSlots, { id: newId, time: '12:00 PM - 12:30 PM' }]
+                                      }
+                                    })
+                                  }}
+                                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 shadow-lg text-xs sm:text-sm"
+                                >
+                                  + Add Slot
+                                </button>
+                              </div>
+                              
+                              <div className="space-y-3">
+                                {(systemConfig.dateSpecificSlots[date] || []).map((slot, slotIndex) => (
+                                  <div key={slot.id} className="flex items-center gap-2 sm:gap-3">
+                                    <input
+                                      type="text"
+                                      value={slot.time}
+                                      onChange={(e) => {
+                                        const dateSlots = [...(systemConfig.dateSpecificSlots[date] || [])]
+                                        dateSlots[slotIndex] = { ...slot, time: e.target.value }
+                                        setSystemConfig({
+                                          ...systemConfig,
+                                          dateSpecificSlots: {
+                                            ...systemConfig.dateSpecificSlots,
+                                            [date]: dateSlots
+                                          }
+                                        })
+                                      }}
+                                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                                      placeholder="e.g., 1:45 PM - 2:15 PM"
+                                    />
+                                    <button
+                                      onClick={() => {
+                                        const dateSlots = (systemConfig.dateSpecificSlots[date] || []).filter((_, i) => i !== slotIndex)
+                                        setSystemConfig({
+                                          ...systemConfig,
+                                          dateSpecificSlots: {
+                                            ...systemConfig.dateSpecificSlots,
+                                            [date]: dateSlots
+                                          }
+                                        })
+                                      }}
+                                      className="bg-red-500 hover:bg-red-600 text-white px-2 py-2 sm:px-3 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 flex-shrink-0"
+                                    >
+                                      <span className="text-xs sm:text-sm">🗑️</span>
+                                    </button>
+                                  </div>
+                                ))}
+                                
+                                {(!systemConfig.dateSpecificSlots[date] || systemConfig.dateSpecificSlots[date].length === 0) && (
+                                  <div className="text-center py-6">
+                                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                      <span className="text-gray-400 text-xl">⏰</span>
+                                    </div>
+                                    <p className="text-gray-500 text-sm">No time slots configured for this date</p>
+                                    <p className="text-gray-400 text-xs mt-1">Click "Add Slot" to get started</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  
+                  {/* Quick Actions */}
+                  <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    <button
+                      onClick={() => {
+                        // Expand all dates
+                        const allExpanded = {}
+                        systemConfig.eventDates.forEach(date => {
+                          allExpanded[date] = true
+                        })
+                        setExpandedDates(allExpanded)
+                      }}
+                      className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg text-sm"
+                    >
+                      📖 Expand All
+                    </button>
+                    <button
+                      onClick={() => setExpandedDates({})}
+                      className="flex-1 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg text-sm"
+                    >
+                      📕 Collapse All
+                    </button>
+                  </div>
+                </div>
+
+                {/* Instructions */}
+                <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center mr-3">
+                        <span className="text-lg sm:text-xl">📋</span>
+                      </div>
+                      <h4 className="text-lg sm:text-xl font-bold text-gray-900">Instructions</h4>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSystemConfig({
+                          ...systemConfig,
+                          instructions: [...systemConfig.instructions, '']
+                        })
+                      }}
+                      className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
+                    >
+                      + Add Instruction
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {systemConfig.instructions.map((instruction, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <textarea
+                          value={instruction}
+                          onChange={(e) => {
+                            const newInstructions = [...systemConfig.instructions]
+                            newInstructions[index] = e.target.value
+                            setSystemConfig({...systemConfig, instructions: newInstructions})
+                          }}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent h-16 resize-none"
+                          placeholder="Enter instruction text"
+                        />
+                        <button
+                          onClick={() => {
+                            const newInstructions = systemConfig.instructions.filter((_, i) => i !== index)
+                            setSystemConfig({...systemConfig, instructions: newInstructions})
+                          }}
+                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Save Button */}
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleSaveConfig}
+                    disabled={configLoading}
+                    className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:from-gray-400 disabled:to-gray-500 text-white px-8 py-4 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg text-lg"
+                  >
+                    {configLoading ? (
+                      <div className="flex items-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Saving...
+                      </div>
+                    ) : (
+                      <>
+                        <span className="mr-2">💾</span>
+                        Save Configuration
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {configSaved && (
+                  <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg text-center">
+                    ✅ Configuration saved successfully!
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -1212,10 +1633,6 @@ export default function AdminDashboard() {
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Project Name</label>
                       <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedBooking.projectName}</p>
-                    </div>
-                    <div>
-                      <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Venue</label>
-                      <p className="text-base sm:text-lg font-semibold text-blue-600">{selectedBooking.venue}</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>

@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 // import { useUser } from '@/contexts/UserContext'
 import Modal from '@/components/Modal'
 import { generateAndDownloadTicket, generateTicketPreview, TicketData } from '@/lib/ticketGenerator'
+import { getSystemConfig, SystemConfig, defaultSystemConfig } from '@/lib/systemConfig'
 
 interface BookingSlot {
   id: string
@@ -28,7 +29,6 @@ interface User {
   team_lead_name?: string
   team_lead_roll_no?: string
   project_name?: string
-  venue?: string
 }
 
 interface Booking {
@@ -66,8 +66,7 @@ export default function BookingPage() {
   const [bookingData, setBookingData] = useState({
     teamLeadName: '',
     teamLeadRollNo: '',
-    projectName: '',
-    venue: ''
+    projectName: ''
   })
   const [systemActive, setSystemActive] = useState(true)
   const [systemStatusLoading, setSystemStatusLoading] = useState(true)
@@ -141,20 +140,52 @@ export default function BookingPage() {
 
   const [slots, setSlots] = useState<BookingSlot[]>([])
   const [loading, setLoading] = useState(true)
+  const [systemConfig, setSystemConfig] = useState<SystemConfig>(defaultSystemConfig)
+
+  // Load system configuration and listen for changes
+  useEffect(() => {
+    // Load initial configuration
+    setSystemConfig(getSystemConfig())
+    
+    // Listen for configuration changes from localStorage
+    const handleStorageChange = () => {
+      setSystemConfig(getSystemConfig())
+    }
+    
+    // Listen for storage events (when admin saves config)
+    window.addEventListener('storage', handleStorageChange)
+    
+    // Also check periodically for changes (in case of same-tab updates)
+    const interval = setInterval(() => {
+      const currentConfig = getSystemConfig()
+      setSystemConfig(prevConfig => {
+        if (JSON.stringify(prevConfig) !== JSON.stringify(currentConfig)) {
+          return currentConfig
+        }
+        return prevConfig
+      })
+    }, 1000) // Check every second
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      clearInterval(interval)
+    }
+  }, [])
+
+  // Refetch slots when configuration changes
+  useEffect(() => {
+    if (systemConfig.eventDates.length > 0) {
+      fetchSlots()
+    }
+  }, [systemConfig])
 
   // Fetch real booking data from Supabase
   const fetchSlots = async () => {
     try {
       setLoading(true)
       
-      // Get all possible slots
-      const dates = ['2025-10-06', '2025-10-07', '2025-10-08', '2025-10-09', '2025-10-10']
-      const times = [
-        { id: '1', time: '1:45 PM - 2:15 PM' },
-        { id: '2', time: '2:15 PM - 2:45 PM' },
-        { id: '3', time: '2:45 PM - 3:15 PM' },
-        { id: '4', time: '3:15 PM - 3:45 PM' }
-      ]
+      // Use dynamic configuration from state
+      const dates = systemConfig.eventDates
 
       // Get all bookings from database
       const { data: bookings, error } = await supabase
@@ -170,6 +201,7 @@ export default function BookingPage() {
         // Create empty slots if database fails
         const allSlots: BookingSlot[] = []
         dates.forEach(date => {
+          const times = systemConfig.dateSpecificSlots[date] || []
           times.forEach(time => {
             allSlots.push({
               id: `${date}-${time.id}`,
@@ -197,6 +229,7 @@ export default function BookingPage() {
       // Generate all slots with real booking status
       const allSlots: BookingSlot[] = []
       dates.forEach(date => {
+        const times = systemConfig.dateSpecificSlots[date] || []
         times.forEach(time => {
           const slotId = `${date}-${time.id}`
           const key = `${date}-${time.time}`
@@ -390,7 +423,6 @@ export default function BookingPage() {
       let teamLeadName: string
       let teamLeadRollNo: string
       let projectName: string
-      let venue: string
       let bookingId: string
       let createdAt: string
 
@@ -405,7 +437,6 @@ export default function BookingPage() {
         teamLeadName = user.team_lead_name || bookingData.teamLeadName
         teamLeadRollNo = user.team_lead_roll_no || bookingData.teamLeadRollNo
         projectName = user.project_name || bookingData.projectName
-        venue = user.venue || bookingData.venue
       } else if (selectedSlot) {
         // User is booking a new slot
         slotDate = selectedSlot.date
@@ -415,7 +446,6 @@ export default function BookingPage() {
         teamLeadName = bookingData.teamLeadName
         teamLeadRollNo = bookingData.teamLeadRollNo
         projectName = bookingData.projectName
-        venue = bookingData.venue
       } else {
         // No booking data available
         console.error('No booking data available for ticket generation')
@@ -428,7 +458,6 @@ export default function BookingPage() {
         teamLeadName,
         teamLeadRollNo,
         projectName,
-        venue,
         slotDate,
         slotTime,
         department: user.department,
@@ -466,8 +495,7 @@ export default function BookingPage() {
           .update({
             team_lead_name: bookingData.teamLeadName,
             team_lead_roll_no: bookingData.teamLeadRollNo,
-            project_name: bookingData.projectName,
-            venue: bookingData.venue
+            project_name: bookingData.projectName
           })
           .eq('id', user.id)
 
@@ -504,7 +532,6 @@ export default function BookingPage() {
             teamLeadName: bookingData.teamLeadName,
             teamLeadRollNo: bookingData.teamLeadRollNo,
             projectName: bookingData.projectName,
-            venue: bookingData.venue,
             slotDate: selectedSlot.date,
             slotTime: selectedSlot.time,
             department: user.department,
@@ -570,7 +597,6 @@ export default function BookingPage() {
       let teamLeadName: string
       let teamLeadRollNo: string
       let projectName: string
-      let venue: string
       let bookingId: string
       let createdAt: string
 
@@ -585,7 +611,6 @@ export default function BookingPage() {
         teamLeadName = user.team_lead_name || bookingData.teamLeadName
         teamLeadRollNo = user.team_lead_roll_no || bookingData.teamLeadRollNo
         projectName = user.project_name || bookingData.projectName
-        venue = user.venue || bookingData.venue
       } else if (selectedSlot) {
         // User is booking a new slot
         slotDate = selectedSlot.date
@@ -595,7 +620,6 @@ export default function BookingPage() {
         teamLeadName = bookingData.teamLeadName
         teamLeadRollNo = bookingData.teamLeadRollNo
         projectName = bookingData.projectName
-        venue = bookingData.venue
       } else {
         // No booking data available
         console.error('No booking data available for ticket preview')
@@ -607,7 +631,6 @@ export default function BookingPage() {
         teamLeadName,
         teamLeadRollNo,
         projectName,
-        venue,
         slotDate,
         slotTime,
         department: user.department,
@@ -976,24 +999,6 @@ export default function BookingPage() {
                   />
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Venue *</label>
-                  <select
-                    value={bookingData.venue}
-                    onChange={(e) => setBookingData({...bookingData, venue: e.target.value})}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
-                  >
-                    <option value="">Select Venue</option>
-                    <option value="IRP Conference Room">IRP Conference Room</option>
-                    <option value="IRP Seminar Hall">IRP Seminar Hall</option>
-                    <option value="IRP Auditorium">IRP Auditorium</option>
-                    <option value="IRP Meeting Room 1">IRP Meeting Room 1</option>
-                    <option value="IRP Meeting Room 2">IRP Meeting Room 2</option>
-                    <option value="Online (Virtual)">Online (Virtual)</option>
-                  </select>
-                </div>
-                
                 <div className="flex gap-4">
                   <button
                     type="submit"
@@ -1048,7 +1053,9 @@ export default function BookingPage() {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Available Review Slots</h2>
-            <p className="text-lg text-gray-600 mb-2">October 6-10, 2025</p>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">{systemConfig.eventTitle}</h3>
+            <p className="text-lg text-gray-600 mb-2">{systemConfig.eventSubtitle}</p>
+            <p className="text-sm text-gray-500 max-w-2xl mx-auto">{systemConfig.eventDescription}</p>
             {userHasBooking ? (
               <div className="bg-blue-100 border border-blue-300 rounded-lg p-4 mb-4">
                 <p className="text-blue-800 font-medium">You already have a booking!</p>
@@ -1089,7 +1096,7 @@ export default function BookingPage() {
           ) : (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                {['2025-10-06', '2025-10-07', '2025-10-08', '2025-10-09', '2025-10-10'].map(date => (
+                {systemConfig.eventDates.map(date => (
                   <div key={date} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
                     <h3 className="font-bold text-xl mb-6 text-center text-gray-800">
                       {formatDate(date)}
@@ -1206,9 +1213,23 @@ export default function BookingPage() {
               <p className="font-semibold text-gray-900">{formatDate(selectedSlot?.date || '')}</p>
               <p className="text-blue-600">{selectedSlot?.time}</p>
             </div>
-            <p className="text-sm text-gray-500 mb-6">
-              You will receive a confirmation email shortly. Please arrive 10 minutes before your scheduled time.
-            </p>
+            {/* Instructions */}
+            {systemConfig.instructions.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
+                <h4 className="font-semibold text-blue-900 mb-3 flex items-center">
+                  <span className="mr-2">📋</span>
+                  Important Instructions:
+                </h4>
+                <ul className="space-y-2 text-sm text-blue-800">
+                  {systemConfig.instructions.map((instruction, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="mr-2 text-blue-600">•</span>
+                      <span>{instruction}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <button
               onClick={() => setShowBookingSuccess(false)}
               className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
