@@ -17,6 +17,7 @@ interface Booking {
   slotDate: string
   slotTime: string
   projectName: string
+  venue: string
   teamLeadName: string
   teamLeadRollNo: string
   createdAt: string
@@ -62,7 +63,8 @@ export default function AdminDashboard() {
             email,
             team_lead_name,
             team_lead_roll_no,
-            project_name
+            project_name,
+            venue
           )
         `)
         .order('created_at', { ascending: false })
@@ -83,6 +85,7 @@ export default function AdminDashboard() {
         slotDate: booking.slot_date,
         slotTime: booking.slot_time,
         projectName: (booking.users as any)?.project_name || '',
+        venue: (booking.users as any)?.venue || '',
         teamLeadName: (booking.users as any)?.team_lead_name || '',
         teamLeadRollNo: (booking.users as any)?.team_lead_roll_no || '',
         createdAt: booking.created_at
@@ -103,10 +106,10 @@ export default function AdminDashboard() {
       
       const dates = ['2025-10-06', '2025-10-07', '2025-10-08', '2025-10-09', '2025-10-10']
       const times = [
-        { id: '1', time: '1:30 PM - 2:00 PM' },
-        { id: '2', time: '2:00 PM - 2:30 PM' },
-        { id: '3', time: '2:30 PM - 3:00 PM' },
-        { id: '4', time: '3:00 PM - 3:30 PM' }
+        { id: '1', time: '1:45 PM - 2:15 PM' },
+        { id: '2', time: '2:15 PM - 2:45 PM' },
+        { id: '3', time: '2:45 PM - 3:15 PM' },
+        { id: '4', time: '3:15 PM - 3:45 PM' }
       ]
 
       // Get all bookings
@@ -805,6 +808,9 @@ export default function AdminDashboard() {
                         <div className="text-sm text-gray-500">
                           Lead: {booking.teamLeadName} ({booking.teamLeadRollNo})
                         </div>
+                        <div className="text-sm text-blue-600 font-medium">
+                          Venue: {booking.venue}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
@@ -1206,6 +1212,10 @@ export default function AdminDashboard() {
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Project Name</label>
                       <p className="text-base sm:text-lg font-semibold text-gray-900">{selectedBooking.projectName}</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs sm:text-sm font-medium text-gray-600 mb-1">Venue</label>
+                      <p className="text-base sm:text-lg font-semibold text-blue-600">{selectedBooking.venue}</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>

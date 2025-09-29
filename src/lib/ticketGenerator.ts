@@ -4,6 +4,7 @@ export interface TicketData {
   teamLeadName: string
   teamLeadRollNo: string
   projectName: string
+  venue: string
   slotDate: string
   slotTime: string
   department: string
@@ -127,6 +128,8 @@ export class TicketGenerator {
       this.ctx.fillText(`Date: ${this.formatDate(data.slotDate)}`, leftColumn, yOffset)
       yOffset += 25
       this.ctx.fillText(`Time: ${this.formatTime(data.slotTime)}`, leftColumn, yOffset)
+      yOffset += 25
+      this.ctx.fillText(`Venue: ${data.venue}`, leftColumn, yOffset)
       yOffset += 25
       this.ctx.fillText(`Department: ${data.department}`, leftColumn, yOffset)
       yOffset += 25

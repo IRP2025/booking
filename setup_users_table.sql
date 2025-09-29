@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
   team_lead_name VARCHAR(255),
   team_lead_roll_no VARCHAR(50),
   project_name VARCHAR(255),
+  venue VARCHAR(255),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

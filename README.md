@@ -92,7 +92,7 @@ The system uses the following main tables:
 
 ### Booking System
 - 4-day booking window (October 6-9, 2025)
-- 4 time slots per day (1:30-2:00 PM, 2:00-2:30 PM, 2:30-3:00 PM, 3:00-3:30 PM)
+- 4 time slots per day (1:45-2:15 PM, 2:15-2:45 PM, 2:45-3:15 PM, 3:15-3:45 PM)
 - Real-time availability status
 - Conflict prevention for simultaneous bookings
 

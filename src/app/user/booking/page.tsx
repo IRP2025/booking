@@ -28,6 +28,7 @@ interface User {
   team_lead_name?: string
   team_lead_roll_no?: string
   project_name?: string
+  venue?: string
 }
 
 interface Booking {
@@ -65,7 +66,8 @@ export default function BookingPage() {
   const [bookingData, setBookingData] = useState({
     teamLeadName: '',
     teamLeadRollNo: '',
-    projectName: ''
+    projectName: '',
+    venue: ''
   })
   const [systemActive, setSystemActive] = useState(true)
   const [systemStatusLoading, setSystemStatusLoading] = useState(true)
@@ -148,10 +150,10 @@ export default function BookingPage() {
       // Get all possible slots
       const dates = ['2025-10-06', '2025-10-07', '2025-10-08', '2025-10-09', '2025-10-10']
       const times = [
-        { id: '1', time: '1:30 PM - 2:00 PM' },
-        { id: '2', time: '2:00 PM - 2:30 PM' },
-        { id: '3', time: '2:30 PM - 3:00 PM' },
-        { id: '4', time: '3:00 PM - 3:30 PM' }
+        { id: '1', time: '1:45 PM - 2:15 PM' },
+        { id: '2', time: '2:15 PM - 2:45 PM' },
+        { id: '3', time: '2:45 PM - 3:15 PM' },
+        { id: '4', time: '3:15 PM - 3:45 PM' }
       ]
 
       // Get all bookings from database
@@ -217,10 +219,10 @@ export default function BookingPage() {
       // Create empty slots if there's an error
       const dates = ['2025-10-06', '2025-10-07', '2025-10-08', '2025-10-09', '2025-10-10']
       const times = [
-        { id: '1', time: '1:30 PM - 2:00 PM' },
-        { id: '2', time: '2:00 PM - 2:30 PM' },
-        { id: '3', time: '2:30 PM - 3:00 PM' },
-        { id: '4', time: '3:00 PM - 3:30 PM' }
+        { id: '1', time: '1:45 PM - 2:15 PM' },
+        { id: '2', time: '2:15 PM - 2:45 PM' },
+        { id: '3', time: '2:45 PM - 3:15 PM' },
+        { id: '4', time: '3:15 PM - 3:45 PM' }
       ]
       const allSlots: BookingSlot[] = []
       dates.forEach(date => {
@@ -376,6 +378,7 @@ export default function BookingPage() {
       let teamLeadName: string
       let teamLeadRollNo: string
       let projectName: string
+      let venue: string
       let bookingId: string
       let createdAt: string
 
@@ -390,6 +393,7 @@ export default function BookingPage() {
         teamLeadName = user.team_lead_name || bookingData.teamLeadName
         teamLeadRollNo = user.team_lead_roll_no || bookingData.teamLeadRollNo
         projectName = user.project_name || bookingData.projectName
+        venue = user.venue || bookingData.venue
       } else if (selectedSlot) {
         // User is booking a new slot
         slotDate = selectedSlot.date
@@ -399,6 +403,7 @@ export default function BookingPage() {
         teamLeadName = bookingData.teamLeadName
         teamLeadRollNo = bookingData.teamLeadRollNo
         projectName = bookingData.projectName
+        venue = bookingData.venue
       } else {
         // No booking data available
         console.error('No booking data available for ticket generation')
@@ -411,6 +416,7 @@ export default function BookingPage() {
         teamLeadName,
         teamLeadRollNo,
         projectName,
+        venue,
         slotDate,
         slotTime,
         department: user.department,
@@ -448,7 +454,8 @@ export default function BookingPage() {
           .update({
             team_lead_name: bookingData.teamLeadName,
             team_lead_roll_no: bookingData.teamLeadRollNo,
-            project_name: bookingData.projectName
+            project_name: bookingData.projectName,
+            venue: bookingData.venue
           })
           .eq('id', user.id)
 
@@ -485,6 +492,7 @@ export default function BookingPage() {
             teamLeadName: bookingData.teamLeadName,
             teamLeadRollNo: bookingData.teamLeadRollNo,
             projectName: bookingData.projectName,
+            venue: bookingData.venue,
             slotDate: selectedSlot.date,
             slotTime: selectedSlot.time,
             department: user.department,
@@ -550,6 +558,7 @@ export default function BookingPage() {
       let teamLeadName: string
       let teamLeadRollNo: string
       let projectName: string
+      let venue: string
       let bookingId: string
       let createdAt: string
 
@@ -564,6 +573,7 @@ export default function BookingPage() {
         teamLeadName = user.team_lead_name || bookingData.teamLeadName
         teamLeadRollNo = user.team_lead_roll_no || bookingData.teamLeadRollNo
         projectName = user.project_name || bookingData.projectName
+        venue = user.venue || bookingData.venue
       } else if (selectedSlot) {
         // User is booking a new slot
         slotDate = selectedSlot.date
@@ -573,6 +583,7 @@ export default function BookingPage() {
         teamLeadName = bookingData.teamLeadName
         teamLeadRollNo = bookingData.teamLeadRollNo
         projectName = bookingData.projectName
+        venue = bookingData.venue
       } else {
         // No booking data available
         console.error('No booking data available for ticket preview')
@@ -584,6 +595,7 @@ export default function BookingPage() {
         teamLeadName,
         teamLeadRollNo,
         projectName,
+        venue,
         slotDate,
         slotTime,
         department: user.department,
@@ -950,6 +962,24 @@ export default function BookingPage() {
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-500 text-gray-900 bg-white"
                     placeholder="Enter project name"
                   />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Venue *</label>
+                  <select
+                    value={bookingData.venue}
+                    onChange={(e) => setBookingData({...bookingData, venue: e.target.value})}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  >
+                    <option value="">Select Venue</option>
+                    <option value="IRP Conference Room">IRP Conference Room</option>
+                    <option value="IRP Seminar Hall">IRP Seminar Hall</option>
+                    <option value="IRP Auditorium">IRP Auditorium</option>
+                    <option value="IRP Meeting Room 1">IRP Meeting Room 1</option>
+                    <option value="IRP Meeting Room 2">IRP Meeting Room 2</option>
+                    <option value="Online (Virtual)">Online (Virtual)</option>
+                  </select>
                 </div>
                 
                 <div className="flex gap-4">
