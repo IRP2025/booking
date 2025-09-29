@@ -49,7 +49,17 @@ export default function AdminDashboard() {
   const [systemConfig, setSystemConfig] = useState<SystemConfig>(defaultSystemConfig)
   const [configLoading, setConfigLoading] = useState(false)
   const [configSaved, setConfigSaved] = useState(false)
+  
+  // User Management State
+  const [users, setUsers] = useState<any[]>([])
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false)
+  const [newUser, setNewUser] = useState({
+    roll_no: '',
+    password: ''
+  })
   const [expandedDates, setExpandedDates] = useState<{ [date: string]: boolean }>({})
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   // Fetch real bookings data from Supabase
   const fetchBookings = async () => {
@@ -509,6 +519,99 @@ export default function AdminDashboard() {
     setSystemConfig(getSystemConfig())
   }, [])
 
+  // Fetch all users
+  const fetchUsers = async () => {
+    try {
+      setUsersLoading(true)
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error fetching users:', error)
+        return
+      }
+
+      setUsers(data || [])
+    } catch (error) {
+      console.error('Error fetching users:', error)
+    } finally {
+      setUsersLoading(false)
+    }
+  }
+
+  // Create new user
+  const createUser = async () => {
+    try {
+      if (!newUser.roll_no || !newUser.password) {
+        alert('Please fill in roll number and password')
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .insert([{
+          roll_no: newUser.roll_no,
+          password: newUser.password
+        }])
+        .select()
+
+      if (error) {
+        console.error('Error creating user:', error)
+        console.error('Error details:', JSON.stringify(error, null, 2))
+        alert('Error creating user: ' + (error.message || 'Unknown error'))
+        return
+      }
+
+      // Reset form
+      setNewUser({
+        roll_no: '',
+        password: ''
+      })
+      setShowCreateUserModal(false)
+      
+      // Refresh users list
+      fetchUsers()
+      alert('User created successfully!')
+    } catch (error) {
+      console.error('Error creating user:', error)
+      alert('Error creating user')
+    }
+  }
+
+  // Delete user
+  const deleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId)
+
+      if (error) {
+        console.error('Error deleting user:', error)
+        alert('Error deleting user: ' + error.message)
+        return
+      }
+
+      // Refresh users list
+      fetchUsers()
+      alert('User deleted successfully!')
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      alert('Error deleting user')
+    }
+  }
+
+  // Load users when component mounts
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
   // Toggle date expansion
   const toggleDateExpansion = (date: string) => {
     setExpandedDates(prev => ({
@@ -615,10 +718,33 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation Tabs */}
         <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 mb-8 overflow-hidden">
-          <nav className="flex flex-wrap sm:flex-nowrap space-x-1 p-2 gap-1 sm:gap-0">
+          {/* Mobile Menu Button */}
+          <div className="sm:hidden p-4 border-b border-gray-200">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-semibold transition-all duration-300"
+            >
+              <div className="flex items-center">
+                <span className="mr-2 text-lg">📊</span>
+                <span>Admin Menu</span>
+              </div>
+              <svg 
+                className={`w-5 h-5 transition-transform duration-300 ${isMobileMenuOpen ? 'rotate-180' : ''}`}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden sm:flex flex-wrap xl:flex-nowrap space-x-1 p-2 gap-1 xl:gap-0">
             {[
               { id: 'overview', name: 'Overview', shortName: 'Overview', icon: '📊', color: 'from-blue-500 to-cyan-500' },
               { id: 'bookings', name: 'All Bookings', shortName: 'Bookings', icon: '📅', color: 'from-green-500 to-emerald-500' },
+              { id: 'users', name: 'User Management', shortName: 'Users', icon: '👥', color: 'from-teal-500 to-cyan-500' },
               { id: 'slots', name: 'Visual Slots', shortName: 'Slots', icon: '🎯', color: 'from-purple-500 to-pink-500' },
               { id: 'customize', name: 'Customize', shortName: 'Customize', icon: '🎨', color: 'from-indigo-500 to-purple-500' },
               { id: 'settings', name: 'System Settings', shortName: 'Settings', icon: '⚙️', color: 'from-orange-500 to-red-500' },
@@ -627,20 +753,51 @@ export default function AdminDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 sm:flex-none py-3 sm:py-4 px-3 sm:px-6 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 transform hover:scale-105 ${
+                className={`flex-1 xl:flex-none py-3 xl:py-4 px-2 xl:px-4 rounded-xl font-bold text-xs xl:text-sm transition-all duration-300 transform hover:scale-105 ${
                   activeTab === tab.id
                     ? `bg-gradient-to-r ${tab.color} text-white shadow-lg`
                     : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
                 }`}
               >
-                <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
-                  <span className="text-sm sm:text-lg">{tab.icon}</span>
-                  <span className="hidden sm:inline">{tab.name}</span>
-                  <span className="sm:hidden text-xs">{tab.shortName}</span>
+                <div className="flex flex-col xl:flex-row items-center gap-1 xl:gap-2">
+                  <span className="text-sm xl:text-lg">{tab.icon}</span>
+                  <span className="hidden xl:inline">{tab.name}</span>
+                  <span className="xl:hidden text-xs truncate max-w-[60px]">{tab.shortName}</span>
                 </div>
               </button>
             ))}
           </nav>
+
+          {/* Mobile Navigation */}
+          {isMobileMenuOpen && (
+            <nav className="sm:hidden p-2 space-y-2">
+              {[
+                { id: 'overview', name: 'Overview', shortName: 'Overview', icon: '📊', color: 'from-blue-500 to-cyan-500' },
+                { id: 'bookings', name: 'All Bookings', shortName: 'Bookings', icon: '📅', color: 'from-green-500 to-emerald-500' },
+                { id: 'users', name: 'User Management', shortName: 'Users', icon: '👥', color: 'from-teal-500 to-cyan-500' },
+                { id: 'slots', name: 'Visual Slots', shortName: 'Slots', icon: '🎯', color: 'from-purple-500 to-pink-500' },
+                { id: 'customize', name: 'Customize', shortName: 'Customize', icon: '🎨', color: 'from-indigo-500 to-purple-500' },
+                { id: 'settings', name: 'System Settings', shortName: 'Settings', icon: '⚙️', color: 'from-orange-500 to-red-500' },
+                { id: 'password', name: 'Change Password', shortName: 'Password', icon: '🔒', color: 'from-gray-500 to-slate-500' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id)
+                    setIsMobileMenuOpen(false)
+                  }}
+                  className={`w-full flex items-center px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-300 ${
+                    activeTab === tab.id
+                      ? `bg-gradient-to-r ${tab.color} text-white shadow-lg`
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
+                >
+                  <span className="mr-3 text-lg">{tab.icon}</span>
+                  <span className="truncate">{tab.name}</span>
+                </button>
+              ))}
+            </nav>
+          )}
         </div>
 
         {/* Overview Tab */}
@@ -687,23 +844,6 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-6 sm:p-8 rounded-2xl shadow-xl text-white transform hover:scale-105 transition-all duration-300 sm:col-span-2 lg:col-span-1">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-purple-100 text-xs sm:text-sm font-bold uppercase tracking-wider">Unique Users</p>
-                        <p className="text-3xl sm:text-4xl font-bold mt-2">
-                          {new Set(bookings.map(b => b.user.rollNo)).size}
-                        </p>
-                        <p className="text-purple-200 text-xs sm:text-sm mt-1">
-                          <span className="hidden sm:inline">Registered students</span>
-                          <span className="sm:hidden">Students</span>
-                        </p>
-                      </div>
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-                        <span className="text-2xl sm:text-3xl">👥</span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-4 sm:p-8">
@@ -781,6 +921,88 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </>
+            )}
+          </div>
+        )}
+
+        {/* User Management Tab */}
+        {activeTab === 'users' && (
+          <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-2xl flex items-center justify-center mr-4">
+                  <span className="text-2xl">👥</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    User Management
+                  </h3>
+                  <p className="text-gray-600">Create and manage student accounts</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCreateUserModal(true)}
+                className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
+              >
+                + Create User
+              </button>
+            </div>
+
+            {usersLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+                <span className="ml-3 text-gray-600">Loading users...</span>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Roll Number
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Created
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {users.map(user => (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            {user.roll_no}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(user.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => deleteUser(user.id)}
+                            className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg transition-colors duration-200"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                {users.length === 0 && (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <span className="text-gray-400 text-2xl">👥</span>
+                    </div>
+                    <p className="text-gray-500 text-lg font-medium">No users found</p>
+                    <p className="text-gray-400 text-sm mt-1">Create your first user to get started</p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -1020,9 +1242,19 @@ export default function AdminDashboard() {
                     </div>
                     <button
                       onClick={() => {
-                        // Get today's date
-                        const today = new Date()
-                        const dateString = today.toISOString().split('T')[0]
+                        // Get the next date in ascending order
+                        let nextDate: Date
+                        if (systemConfig.eventDates.length === 0) {
+                          // If no dates, use today
+                          nextDate = new Date()
+                        } else {
+                          // Get the last date and add one day
+                          const lastDate = new Date(Math.max(...systemConfig.eventDates.map(date => new Date(date).getTime())))
+                          nextDate = new Date(lastDate)
+                          nextDate.setDate(lastDate.getDate() + 1)
+                        }
+                        
+                        const dateString = nextDate.toISOString().split('T')[0]
                         
                         // Create default slots for the new date
                         const defaultSlots = [
@@ -1039,23 +1271,15 @@ export default function AdminDashboard() {
                             ...systemConfig.dateSpecificSlots,
                             [dateString]: defaultSlots
                           },
-                          enrollmentTimes: {
-                            ...systemConfig.enrollmentTimes,
-                            [dateString]: { startTime: '16:00', endTime: '18:00' }
-                          }
                         })
                         
-                        // Auto-expand the new date and scroll to it
-                        setExpandedDates(prev => ({
-                          ...prev,
-                          [dateString]: true
-                        }))
-                        
-                        // Scroll to the time slots section after a short delay
+                        // Scroll to the newly added date after a short delay
                         setTimeout(() => {
-                          const timeSlotsSection = document.querySelector('[data-section="time-slots"]')
-                          if (timeSlotsSection) {
-                            timeSlotsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                          const newDateInput = document.querySelector(`input[value="${dateString}"]`)
+                          if (newDateInput) {
+                            newDateInput.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                            // Focus the input for immediate editing
+                            ;(newDateInput as HTMLInputElement).focus()
                           }
                         }, 100)
                       }}
@@ -1086,15 +1310,12 @@ export default function AdminDashboard() {
                             const dateToRemove = systemConfig.eventDates[index]
                             const newDates = systemConfig.eventDates.filter((_, i) => i !== index)
                             const newDateSpecificSlots = { ...systemConfig.dateSpecificSlots }
-                            const newEnrollmentTimes = { ...systemConfig.enrollmentTimes }
                             delete newDateSpecificSlots[dateToRemove]
-                            delete newEnrollmentTimes[dateToRemove]
                             
                             setSystemConfig({
                               ...systemConfig, 
                               eventDates: newDates,
-                              dateSpecificSlots: newDateSpecificSlots,
-                              enrollmentTimes: newEnrollmentTimes
+                              dateSpecificSlots: newDateSpecificSlots
                             })
                           }}
                           className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 flex-shrink-0 text-sm"
@@ -1117,7 +1338,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Date-Specific Time Slots */}
-                <div data-section="time-slots" className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-4 sm:p-6">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-4 sm:p-6">
                   <div className="flex items-center mb-6">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mr-3">
                       <span className="text-lg sm:text-xl">⏰</span>
@@ -1273,170 +1494,6 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Enrollment Time Windows */}
-                <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-2xl p-4 sm:p-6">
-                  <div className="flex items-center mb-6">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center mr-3">
-                      <span className="text-lg sm:text-xl">🕐</span>
-                    </div>
-                    <h4 className="text-lg sm:text-xl font-bold text-gray-900">Enrollment Time Windows</h4>
-                  </div>
-                  
-                  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      <strong>💡 How it works:</strong> Set specific time windows when users can book slots for each date. 
-                      For example, allow booking only from 4:00 PM to 6:00 PM on October 6th.
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {systemConfig.eventDates.map((date, index) => {
-                      const enrollmentTime = systemConfig.enrollmentTimes[date] || { startTime: '16:00', endTime: '18:00' }
-                      
-                      return (
-                        <div key={date} className="bg-white rounded-xl p-4 border border-teal-200">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center">
-                              <div className="w-8 h-8 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center mr-3">
-                                <span className="text-white text-sm">📅</span>
-                              </div>
-                              <div>
-                                <h5 className="font-semibold text-gray-800 text-sm">
-                                  {new Date(date).toLocaleDateString('en-US', { 
-                                    weekday: 'short', 
-                                    month: 'short', 
-                                    day: 'numeric' 
-                                  })}
-                                </h5>
-                                <p className="text-xs text-gray-500">
-                                  {enrollmentTime.startTime ? 
-                                    `${enrollmentTime.startTime} - ${enrollmentTime.endTime}` : 
-                                    'No enrollment window set'
-                                  }
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Start Time</label>
-                              <input
-                                type="time"
-                                value={enrollmentTime.startTime}
-                                onChange={(e) => {
-                                  setSystemConfig({
-                                    ...systemConfig,
-                                    enrollmentTimes: {
-                                      ...systemConfig.enrollmentTimes,
-                                      [date]: {
-                                        ...enrollmentTime,
-                                        startTime: e.target.value
-                                      }
-                                    }
-                                  })
-                                }}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">End Time</label>
-                              <input
-                                type="time"
-                                value={enrollmentTime.endTime}
-                                onChange={(e) => {
-                                  setSystemConfig({
-                                    ...systemConfig,
-                                    enrollmentTimes: {
-                                      ...systemConfig.enrollmentTimes,
-                                      [date]: {
-                                        ...enrollmentTime,
-                                        endTime: e.target.value
-                                      }
-                                    }
-                                  })
-                                }}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="mt-3 flex gap-2">
-                            <button
-                              onClick={() => {
-                                setSystemConfig({
-                                  ...systemConfig,
-                                  enrollmentTimes: {
-                                    ...systemConfig.enrollmentTimes,
-                                    [date]: { startTime: '', endTime: '' }
-                                  }
-                                })
-                              }}
-                              className="text-xs text-red-600 hover:text-red-800 font-medium"
-                            >
-                              Clear Times
-                            </button>
-                            <span className="text-xs text-gray-400">|</span>
-                            <span className="text-xs text-gray-500">
-                              Empty = Always available
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  
-                  <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                    <h5 className="font-medium text-gray-800 mb-2 text-sm">📋 Quick Setup Options:</h5>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => {
-                          const newEnrollmentTimes = { ...systemConfig.enrollmentTimes }
-                          systemConfig.eventDates.forEach(date => {
-                            newEnrollmentTimes[date] = { startTime: '16:00', endTime: '18:00' }
-                          })
-                          setSystemConfig({
-                            ...systemConfig,
-                            enrollmentTimes: newEnrollmentTimes
-                          })
-                        }}
-                        className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 rounded text-xs font-medium"
-                      >
-                        4:00-6:00 PM All Days
-                      </button>
-                      <button
-                        onClick={() => {
-                          const newEnrollmentTimes = { ...systemConfig.enrollmentTimes }
-                          systemConfig.eventDates.forEach(date => {
-                            newEnrollmentTimes[date] = { startTime: '09:00', endTime: '12:00' }
-                          })
-                          setSystemConfig({
-                            ...systemConfig,
-                            enrollmentTimes: newEnrollmentTimes
-                          })
-                        }}
-                        className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 rounded text-xs font-medium"
-                      >
-                        9:00-12:00 AM All Days
-                      </button>
-                      <button
-                        onClick={() => {
-                          const newEnrollmentTimes = { ...systemConfig.enrollmentTimes }
-                          systemConfig.eventDates.forEach(date => {
-                            newEnrollmentTimes[date] = { startTime: '', endTime: '' }
-                          })
-                          setSystemConfig({
-                            ...systemConfig,
-                            enrollmentTimes: newEnrollmentTimes
-                          })
-                        }}
-                        className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-xs font-medium"
-                      >
-                        Always Available
-                      </button>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Instructions */}
                 <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl p-4 sm:p-6">
@@ -1570,83 +1627,55 @@ export default function AdminDashboard() {
                 <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center mb-4 gap-3">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mr-0 sm:mr-3">
-                      <span className="text-lg sm:text-xl">🕐</span>
+                      <span className="text-lg sm:text-xl">⏰</span>
                     </div>
                     <div>
-                      <h4 className="text-base sm:text-lg font-bold text-gray-900">Global Enrollment Window</h4>
-                      <p className="text-sm sm:text-base text-gray-600">Set a global time window when users can book slots</p>
+                      <h4 className="text-base sm:text-lg font-bold text-gray-900">Auto Deactivate Timer</h4>
+                      <p className="text-sm sm:text-base text-gray-600">Set a timer to automatically deactivate the system</p>
                     </div>
                   </div>
                   
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Start Time</label>
-                        <input
-                          type="time"
-                          value={systemConfig.globalEnrollmentStart || ''}
-                          onChange={(e) => setSystemConfig({
-                            ...systemConfig,
-                            globalEnrollmentStart: e.target.value
-                          })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-medium"
-                        />
+                  {timerActive ? (
+                    <div className="space-y-4">
+                      <div className="bg-gradient-to-r from-orange-500 to-yellow-500 rounded-2xl p-4 sm:p-6 text-white">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div>
+                            <p className="text-orange-100 text-xs sm:text-sm font-bold uppercase tracking-wider">Timer Active</p>
+                            <p className="text-2xl sm:text-3xl font-bold mt-2">
+                              {formatTimeRemaining(timeRemaining)}
+                            </p>
+                            <p className="text-orange-100 text-xs sm:text-sm mt-1">
+                              System will deactivate automatically
+                            </p>
+                          </div>
+                          <div className="text-3xl sm:text-4xl">⏰</div>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">End Time</label>
-                        <input
-                          type="time"
-                          value={systemConfig.globalEnrollmentEnd || ''}
-                          onChange={(e) => setSystemConfig({
-                            ...systemConfig,
-                            globalEnrollmentEnd: e.target.value
-                          })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-medium"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-800">
-                        <strong>💡 How it works:</strong> This sets a global time window for all dates. 
-                        If set, users can only book slots during this time window on any day.
-                        Leave empty to allow booking at any time.
-                      </p>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2">
                       <button
-                        onClick={() => setSystemConfig({
-                          ...systemConfig,
-                          globalEnrollmentStart: '16:00',
-                          globalEnrollmentEnd: '18:00'
-                        })}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                        onClick={handleCancelTimer}
+                        className="w-full sm:w-auto bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
                       >
-                        Set 4:00-6:00 PM
-                      </button>
-                      <button
-                        onClick={() => setSystemConfig({
-                          ...systemConfig,
-                          globalEnrollmentStart: '09:00',
-                          globalEnrollmentEnd: '12:00'
-                        })}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
-                      >
-                        Set 9:00-12:00 AM
-                      </button>
-                      <button
-                        onClick={() => setSystemConfig({
-                          ...systemConfig,
-                          globalEnrollmentStart: '',
-                          globalEnrollmentEnd: ''
-                        })}
-                        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
-                      >
-                        Clear (Always Available)
+                        Cancel Timer
                       </button>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                      <input
+                        type="number"
+                        value={autoDeactivate}
+                        onChange={(e) => setAutoDeactivate(e.target.value)}
+                        placeholder="Enter minutes"
+                        min="1"
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 font-medium"
+                      />
+                      <button
+                        onClick={handleAutoDeactivate}
+                        className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white px-6 sm:px-8 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg"
+                      >
+                        Set Timer
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1880,6 +1909,75 @@ export default function AdminDashboard() {
                   <span className="mr-2">🗑️</span>
                   Remove Booking
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create User Modal */}
+        {showCreateUserModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-2xl font-bold text-gray-900">Create New User</h3>
+                  <button
+                    onClick={() => setShowCreateUserModal(false)}
+                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                <form onSubmit={(e) => { e.preventDefault(); createUser(); }} className="space-y-6">
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Roll Number *
+                      </label>
+                      <input
+                        type="text"
+                        value={newUser.roll_no}
+                        onChange={(e) => setNewUser({...newUser, roll_no: e.target.value})}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        placeholder="Enter roll number"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Password *
+                      </label>
+                      <input
+                        type="password"
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        placeholder="Enter password"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateUserModal(false)}
+                      className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white rounded-lg font-medium transition-all duration-300 transform hover:scale-105"
+                    >
+                      Create User
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           </div>

@@ -6,9 +6,6 @@ export interface SystemConfig {
   eventDates: string[]
   timeSlots: { id: string; time: string }[]
   dateSpecificSlots: { [date: string]: { id: string; time: string }[] }
-  enrollmentTimes: { [date: string]: { startTime: string; endTime: string } }
-  globalEnrollmentStart: string
-  globalEnrollmentEnd: string
   instructions: string[]
 }
 
@@ -56,15 +53,6 @@ export const defaultSystemConfig: SystemConfig = {
       { id: '4', time: '3:15 PM - 3:45 PM' }
     ]
   },
-  enrollmentTimes: {
-    '2025-10-06': { startTime: '16:00', endTime: '18:00' },
-    '2025-10-07': { startTime: '16:00', endTime: '18:00' },
-    '2025-10-08': { startTime: '16:00', endTime: '18:00' },
-    '2025-10-09': { startTime: '16:00', endTime: '18:00' },
-    '2025-10-10': { startTime: '16:00', endTime: '18:00' }
-  },
-  globalEnrollmentStart: '',
-  globalEnrollmentEnd: '',
   instructions: [
     'Reviewers will come from industry professionals',
     'Make sure to give a professional presentation',

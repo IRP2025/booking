@@ -60,13 +60,11 @@ export default function BookingPage() {
   const [isBooking, setIsBooking] = useState(false)
   const [userHasBooking, setUserHasBooking] = useState(false)
   const [existingBooking, setExistingBooking] = useState<Booking | null>(null)
-  const [teamMembers, setTeamMembers] = useState([
-    { name: '', rollNo: '', department: '', year: '' }
-  ])
   const [bookingData, setBookingData] = useState({
-    teamLeadName: '',
-    teamLeadRollNo: '',
-    projectName: ''
+    name: '',
+    projectTitle: '',
+    department: '',
+    year: ''
   })
   const [systemActive, setSystemActive] = useState(true)
   const [systemStatusLoading, setSystemStatusLoading] = useState(true)
@@ -179,37 +177,6 @@ export default function BookingPage() {
     }
   }, [systemConfig])
 
-  // Check if current time is within enrollment window for a specific date
-  const isWithinEnrollmentWindow = (date: string) => {
-    const now = new Date()
-    const today = now.toISOString().split('T')[0]
-    const currentTime = now.toTimeString().slice(0, 5) // HH:MM format
-    
-    // Check global enrollment window first
-    if (systemConfig.globalEnrollmentStart && systemConfig.globalEnrollmentEnd) {
-      if (date === today) {
-        // If it's today, check global time window
-        return currentTime >= systemConfig.globalEnrollmentStart && currentTime <= systemConfig.globalEnrollmentEnd
-      } else {
-        // If it's not today, check if it's a future date
-        return new Date(date) > now
-      }
-    }
-    
-    // Check date-specific enrollment window
-    const enrollmentTime = systemConfig.enrollmentTimes[date]
-    if (!enrollmentTime || !enrollmentTime.startTime || !enrollmentTime.endTime) {
-      return true // Always available if no enrollment window set
-    }
-    
-    // If it's not the enrollment date, check if it's before the date
-    if (date !== today) {
-      return new Date(date) > now
-    }
-    
-    // If it's the enrollment date, check the time window
-    return currentTime >= enrollmentTime.startTime && currentTime <= enrollmentTime.endTime
-  }
 
   // Fetch real booking data from Supabase
   const fetchSlots = async () => {
@@ -262,8 +229,6 @@ export default function BookingPage() {
       const allSlots: BookingSlot[] = []
       dates.forEach(date => {
         const times = systemConfig.dateSpecificSlots[date] || []
-        const isEnrollmentOpen = isWithinEnrollmentWindow(date)
-        
         times.forEach(time => {
           const slotId = `${date}-${time.id}`
           const key = `${date}-${time.time}`
@@ -273,7 +238,7 @@ export default function BookingPage() {
             id: slotId,
             date,
             time: time.time,
-            isAvailable: !bookingInfo && isEnrollmentOpen,
+            isAvailable: !bookingInfo,
             bookedBy: bookingInfo?.bookedBy,
             projectName: bookingInfo?.projectName
           })
@@ -432,19 +397,6 @@ export default function BookingPage() {
     }
   }
 
-  const addTeamMember = () => {
-    setTeamMembers([...teamMembers, { name: '', rollNo: '', department: '', year: '' }])
-  }
-
-  const removeTeamMember = (index: number) => {
-    setTeamMembers(teamMembers.filter((_, i) => i !== index))
-  }
-
-  const updateTeamMember = (index: number, field: string, value: string) => {
-    const updated = [...teamMembers]
-    updated[index] = { ...updated[index], [field]: value }
-    setTeamMembers(updated)
-  }
 
   const handleDownloadTicket = async () => {
     if (!user) return
@@ -454,9 +406,6 @@ export default function BookingPage() {
       // Use existing booking data if available, otherwise use selected slot
       let slotDate: string
       let slotTime: string
-      let teamLeadName: string
-      let teamLeadRollNo: string
-      let projectName: string
       let bookingId: string
       let createdAt: string
 
@@ -466,20 +415,12 @@ export default function BookingPage() {
         slotTime = existingBooking.slot_time
         bookingId = existingBooking.id
         createdAt = existingBooking.created_at
-        
-        // Get team details from user profile or booking data
-        teamLeadName = user.team_lead_name || bookingData.teamLeadName
-        teamLeadRollNo = user.team_lead_roll_no || bookingData.teamLeadRollNo
-        projectName = user.project_name || bookingData.projectName
       } else if (selectedSlot) {
         // User is booking a new slot
         slotDate = selectedSlot.date
         slotTime = selectedSlot.time
         bookingId = 'temp-id'
         createdAt = new Date().toISOString()
-        teamLeadName = bookingData.teamLeadName
-        teamLeadRollNo = bookingData.teamLeadRollNo
-        projectName = bookingData.projectName
       } else {
         // No booking data available
         console.error('No booking data available for ticket generation')
@@ -489,16 +430,16 @@ export default function BookingPage() {
 
       const ticketData: TicketData = {
         bookingId,
-        teamLeadName,
-        teamLeadRollNo,
-        projectName,
+        teamLeadName: user.name || bookingData.name,
+        teamLeadRollNo: user.roll_no,
+        projectName: user.project_name || bookingData.projectTitle,
         slotDate,
         slotTime,
-        department: user.department,
-        year: user.year.toString(),
-        userName: user.name,
+        department: user.department || bookingData.department,
+        year: user.year?.toString() || bookingData.year,
+        userName: user.name || bookingData.name,
         userRollNo: user.roll_no,
-        userEmail: user.email,
+        userEmail: user.email || '',
         createdAt
       }
       
@@ -523,13 +464,14 @@ export default function BookingPage() {
     if (selectedSlot && user) {
       setIsBooking(true)
       try {
-        // Update user profile with booking details
+        // Update user profile with individual details
         const { error: userUpdateError } = await supabase
           .from('users')
           .update({
-            team_lead_name: bookingData.teamLeadName,
-            team_lead_roll_no: bookingData.teamLeadRollNo,
-            project_name: bookingData.projectName
+            name: bookingData.name,
+            project_name: bookingData.projectTitle,
+            department: bookingData.department,
+            year: parseInt(bookingData.year)
           })
           .eq('id', user.id)
 
@@ -563,16 +505,16 @@ export default function BookingPage() {
         if (newBooking) {
           const ticketData: TicketData = {
             bookingId: newBooking.id,
-            teamLeadName: bookingData.teamLeadName,
-            teamLeadRollNo: bookingData.teamLeadRollNo,
-            projectName: bookingData.projectName,
+            teamLeadName: bookingData.name,
+            teamLeadRollNo: user.roll_no,
+            projectName: bookingData.projectTitle,
             slotDate: selectedSlot.date,
             slotTime: selectedSlot.time,
-            department: user.department,
-            year: user.year.toString(),
-            userName: user.name,
+            department: bookingData.department,
+            year: bookingData.year,
+            userName: bookingData.name,
             userRollNo: user.roll_no,
-            userEmail: user.email,
+            userEmail: user.email || '',
             createdAt: newBooking.created_at
           }
           
@@ -628,9 +570,6 @@ export default function BookingPage() {
       // Use existing booking data if available, otherwise use selected slot
       let slotDate: string
       let slotTime: string
-      let teamLeadName: string
-      let teamLeadRollNo: string
-      let projectName: string
       let bookingId: string
       let createdAt: string
 
@@ -640,20 +579,12 @@ export default function BookingPage() {
         slotTime = existingBooking.slot_time
         bookingId = existingBooking.id
         createdAt = existingBooking.created_at
-        
-        // Get team details from user profile or booking data
-        teamLeadName = user.team_lead_name || bookingData.teamLeadName
-        teamLeadRollNo = user.team_lead_roll_no || bookingData.teamLeadRollNo
-        projectName = user.project_name || bookingData.projectName
       } else if (selectedSlot) {
         // User is booking a new slot
         slotDate = selectedSlot.date
         slotTime = selectedSlot.time
         bookingId = 'temp-id'
         createdAt = new Date().toISOString()
-        teamLeadName = bookingData.teamLeadName
-        teamLeadRollNo = bookingData.teamLeadRollNo
-        projectName = bookingData.projectName
       } else {
         // No booking data available
         console.error('No booking data available for ticket preview')
@@ -662,16 +593,16 @@ export default function BookingPage() {
 
       const ticketData: TicketData = {
         bookingId,
-        teamLeadName,
-        teamLeadRollNo,
-        projectName,
+        teamLeadName: user.name || bookingData.name,
+        teamLeadRollNo: user.roll_no,
+        projectName: user.project_name || bookingData.projectTitle,
         slotDate,
         slotTime,
-        department: user.department,
-        year: user.year.toString(),
-        userName: user.name,
+        department: user.department || bookingData.department,
+        year: user.year?.toString() || bookingData.year,
+        userName: user.name || bookingData.name,
         userRollNo: user.roll_no,
-        userEmail: user.email,
+        userEmail: user.email || '',
         createdAt
       }
       
@@ -777,157 +708,96 @@ export default function BookingPage() {
         {/* Profile Completion Popup */}
         {showProfilePopup && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
-            <div className="bg-white/95 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 p-4 sm:p-8 w-full max-w-5xl my-4 sm:my-8 max-h-[95vh] overflow-y-auto">
+            <div className="bg-white/95 backdrop-blur-lg rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 p-4 sm:p-6 lg:p-8 w-full max-w-2xl lg:max-w-5xl my-4 sm:my-8 max-h-[95vh] overflow-y-auto">
               <div className="text-center mb-6 sm:mb-8">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl sm:rounded-3xl flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-lg">
-                  <span className="text-2xl sm:text-3xl">👥</span>
+                  <span className="text-2xl sm:text-3xl">👤</span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
                   Complete Your Profile
                 </h2>
-                <p className="text-gray-600 text-base sm:text-lg font-medium">Add your team member details (optional)</p>
-                <div className="mt-4 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200/50 rounded-xl sm:rounded-2xl backdrop-blur-sm">
-                  <p className="text-xs sm:text-sm text-blue-700 font-medium">
-                    <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                    You can skip this for now and complete it later
-                  </p>
-                </div>
+                <p className="text-gray-600 text-sm sm:text-base lg:text-lg font-medium">Add your personal details (required for booking)</p>
               </div>
               
-              <div className="space-y-6 sm:space-y-8 max-h-96 overflow-y-auto pr-1 sm:pr-2">
-                {teamMembers.map((member, index) => (
-                  <div key={index} className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-4 sm:p-6 border border-gray-200/50 shadow-lg">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-3">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center text-white font-bold text-xs sm:text-sm mr-3 sm:mr-4">
-                          {index + 1}
-                        </div>
-                        <h3 className="text-lg sm:text-xl font-bold text-gray-900">Team Member {index + 1}</h3>
-                      </div>
-                      {teamMembers.length > 1 && (
-                        <button
-                          onClick={() => removeTeamMember(index)}
-                          className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-3 sm:px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 transform hover:scale-105 shadow-md self-start sm:self-auto"
-                        >
-                          <span className="mr-1">🗑️</span>
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                      <div className="space-y-2">
-                        <label className="block text-xs sm:text-sm font-bold text-gray-700 flex items-center">
-                          <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                          Full Name *
-                        </label>
-                        <input
-                          type="text"
-                          value={member.name}
-                          onChange={(e) => updateTeamMember(index, 'name', e.target.value)}
-                          className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm text-sm sm:text-base"
-                          placeholder="Enter team member name"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="block text-xs sm:text-sm font-bold text-gray-700 flex items-center">
-                          <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                          </svg>
-                          Roll Number *
-                        </label>
-                        <input
-                          type="text"
-                          value={member.rollNo}
-                          onChange={(e) => updateTeamMember(index, 'rollNo', e.target.value)}
-                          className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm text-sm sm:text-base"
-                          placeholder="Enter roll number"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="block text-xs sm:text-sm font-bold text-gray-700 flex items-center">
-                          <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                          </svg>
-                          Department *
-                        </label>
-                        <select
-                          value={member.department}
-                          onChange={(e) => updateTeamMember(index, 'department', e.target.value)}
-                          className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm text-sm sm:text-base"
-                        >
-                          <option value="">Select Department</option>
-                          <option value="CSE">CSE</option>
-                          <option value="IT">IT</option>
-                          <option value="ECE">ECE</option>
-                          <option value="EEE">EEE</option>
-                          <option value="MECH">Mechanical</option>
-                          <option value="CYBER">CSE CY</option>
-                          <option value="AIDS">AIDS</option>
-                          <option value="IOT">CSE IOT</option>
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="block text-xs sm:text-sm font-bold text-gray-700 flex items-center">
-                          <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          Year *
-                        </label>
-                        <select
-                          value={member.year}
-                          onChange={(e) => updateTeamMember(index, 'year', e.target.value)}
-                          className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium shadow-sm text-sm sm:text-base"
-                        >
-                          <option value="">Select Year</option>
-                          <option value="1">1st Year</option>
-                          <option value="2">2nd Year</option>
-                          <option value="3">3rd Year</option>
-                          <option value="4">4th Year</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <form onSubmit={(e) => { e.preventDefault(); handleProfileComplete(); }} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                  <input
+                    type="text"
+                    value={bookingData.name}
+                    onChange={(e) => setBookingData({...bookingData, name: e.target.value})}
+                    required
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-500 text-gray-900 bg-white text-sm sm:text-base"
+                    placeholder="Enter your full name"
+                  />
+                </div>
                 
-                <div className="flex justify-center sticky bottom-0 bg-white/95 backdrop-blur-sm pt-4 sm:pt-6 border-t border-gray-200">
-                  <button
-                    onClick={addTeamMember}
-                    className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Project Title *</label>
+                  <input
+                    type="text"
+                    value={bookingData.projectTitle}
+                    onChange={(e) => setBookingData({...bookingData, projectTitle: e.target.value})}
+                    required
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-500 text-gray-900 bg-white text-sm sm:text-base"
+                    placeholder="Enter your project title"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Department *</label>
+                  <select
+                    value={bookingData.department}
+                    onChange={(e) => setBookingData({...bookingData, department: e.target.value})}
+                    required
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm sm:text-base"
                   >
-                    <span className="mr-2">➕</span>
-                    Add Team Member
+                    <option value="">Select Department</option>
+                    <option value="CSE">CSE</option>
+                    <option value="IT">IT</option>
+                    <option value="ECE">ECE</option>
+                    <option value="EEE">EEE</option>
+                    <option value="MECH">Mechanical</option>
+                    <option value="CYBER">CSE CY</option>
+                    <option value="AIDS">AIDS</option>
+                    <option value="IOT">CSE IOT</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year *</label>
+                  <select
+                    value={bookingData.year}
+                    onChange={(e) => setBookingData({...bookingData, year: e.target.value})}
+                    required
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm sm:text-base"
+                  >
+                    <option value="">Select Year</option>
+                    <option value="1">1st Year</option>
+                    <option value="2">2nd Year</option>
+                    <option value="3">3rd Year</option>
+                    <option value="4">4th Year</option>
+                  </select>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 lg:gap-6 mt-6 sm:mt-8">
+                  <button
+                    type="button"
+                    onClick={handleProfileSkip}
+                    className="w-full sm:w-auto bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-4 sm:px-6 lg:px-8 py-2 sm:py-3 lg:py-4 rounded-xl font-bold text-sm sm:text-base lg:text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+                  >
+                    <span className="mr-2">⏭️</span>
+                    Skip for Now
+                  </button>
+                  <button
+                    type="submit"
+                    className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-4 sm:px-6 lg:px-8 py-2 sm:py-3 lg:py-4 rounded-xl font-bold text-sm sm:text-base lg:text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+                  >
+                    <span className="mr-2">✅</span>
+                    Complete Profile
                   </button>
                 </div>
-              </div>
-              
-              {teamMembers.length > 3 && (
-                <div className="text-center mt-4">
-                  <div className="inline-flex items-center px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50 rounded-full">
-                    <span className="w-2 h-2 bg-amber-500 rounded-full mr-2"></span>
-                    <p className="text-xs sm:text-sm text-amber-700 font-medium">Scroll up to see more team members</p>
-                  </div>
-                </div>
-              )}
-              
-              <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 mt-6 sm:mt-8">
-                <button
-                  onClick={handleProfileSkip}
-                  className="w-full sm:w-auto bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
-                >
-                  <span className="mr-2">⏭️</span>
-                  Skip for Now
-                </button>
-                <button
-                  onClick={handleProfileComplete}
-                  className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-bold text-base sm:text-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
-                >
-                  <span className="mr-2">✅</span>
-                  Complete Profile
-                </button>
-              </div>
+              </form>
             </div>
           </div>
         )}
@@ -985,12 +855,12 @@ export default function BookingPage() {
         {/* Booking Form Modal */}
         {showBookingForm && selectedSlot && (
           <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+            <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 w-full max-w-sm sm:max-w-md lg:max-w-lg max-h-[95vh] overflow-y-auto">
               <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-2xl">📅</span>
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-xl sm:text-2xl">📅</span>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Book Your Slot</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Book Your Slot</h2>
                 <p className="text-gray-600">
                   Selected: {formatDate(selectedSlot.date)} at {selectedSlot.time}
                 </p>
@@ -998,50 +868,74 @@ export default function BookingPage() {
               
               <form onSubmit={handleBookingSubmit} className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Team Lead Name *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                   <input
                     type="text"
-                    value={bookingData.teamLeadName}
-                    onChange={(e) => setBookingData({...bookingData, teamLeadName: e.target.value})}
+                    value={bookingData.name}
+                    onChange={(e) => setBookingData({...bookingData, name: e.target.value})}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-500 text-gray-900 bg-white"
-                    placeholder="Enter team lead name"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-500 text-gray-900 bg-white text-sm sm:text-base"
+                    placeholder="Enter your full name"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Team Lead Roll Number *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Project Title *</label>
                   <input
                     type="text"
-                    value={bookingData.teamLeadRollNo}
-                    onChange={(e) => setBookingData({...bookingData, teamLeadRollNo: e.target.value})}
+                    value={bookingData.projectTitle}
+                    onChange={(e) => setBookingData({...bookingData, projectTitle: e.target.value})}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-500 text-gray-900 bg-white"
-                    placeholder="Enter team lead roll number"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-500 text-gray-900 bg-white text-sm sm:text-base"
+                    placeholder="Enter your project title"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Project Name *</label>
-                  <input
-                    type="text"
-                    value={bookingData.projectName}
-                    onChange={(e) => setBookingData({...bookingData, projectName: e.target.value})}
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Department *</label>
+                  <select
+                    value={bookingData.department}
+                    onChange={(e) => setBookingData({...bookingData, department: e.target.value})}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-500 text-gray-900 bg-white"
-                    placeholder="Enter project name"
-                  />
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm sm:text-base"
+                  >
+                    <option value="">Select Department</option>
+                    <option value="CSE">CSE</option>
+                    <option value="IT">IT</option>
+                    <option value="ECE">ECE</option>
+                    <option value="EEE">EEE</option>
+                    <option value="MECH">Mechanical</option>
+                    <option value="CYBER">CSE CY</option>
+                    <option value="AIDS">AIDS</option>
+                    <option value="IOT">CSE IOT</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year *</label>
+                  <select
+                    value={bookingData.year}
+                    onChange={(e) => setBookingData({...bookingData, year: e.target.value})}
+                    required
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white text-sm sm:text-base"
+                  >
+                    <option value="">Select Year</option>
+                    <option value="1">1st Year</option>
+                    <option value="2">2nd Year</option>
+                    <option value="3">3rd Year</option>
+                    <option value="4">4th Year</option>
+                  </select>
                 </div>
                 
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <button
                     type="submit"
                     disabled={isBooking}
-                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 shadow-sm flex items-center justify-center"
+                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors duration-200 shadow-sm flex items-center justify-center text-sm sm:text-base"
                   >
                     {isBooking ? (
                       <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white mr-2"></div>
                         Booking...
                       </>
                     ) : (
@@ -1052,7 +946,7 @@ export default function BookingPage() {
                     type="button"
                     onClick={() => setShowBookingForm(false)}
                     disabled={isBooking}
-                    className="flex-1 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 shadow-sm"
+                    className="flex-1 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-colors duration-200 shadow-sm text-sm sm:text-base"
                   >
                     Cancel
                   </button>
@@ -1091,68 +985,6 @@ export default function BookingPage() {
             <p className="text-lg text-gray-600 mb-2">{systemConfig.eventSubtitle}</p>
             <p className="text-sm text-gray-500 max-w-2xl mx-auto mb-4">{systemConfig.eventDescription}</p>
             
-            {/* Enrollment Time Windows Info */}
-            {(systemConfig.globalEnrollmentStart && systemConfig.globalEnrollmentEnd) || 
-             (systemConfig.enrollmentTimes && Object.keys(systemConfig.enrollmentTimes).length > 0) ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 max-w-2xl mx-auto">
-                <div className="flex items-center justify-center mb-2">
-                  <span className="text-blue-600 mr-2">🕐</span>
-                  <h4 className="text-sm font-semibold text-blue-800">
-                    {systemConfig.globalEnrollmentStart && systemConfig.globalEnrollmentEnd ? 'Global Enrollment Window' : 'Enrollment Windows'}
-                  </h4>
-                </div>
-                <div className="text-xs text-blue-700 space-y-1">
-                  {systemConfig.globalEnrollmentStart && systemConfig.globalEnrollmentEnd ? (
-                    <div className="text-center">
-                      <div className="flex items-center justify-center">
-                        <span className="mr-2">
-                          {systemConfig.globalEnrollmentStart} - {systemConfig.globalEnrollmentEnd}
-                        </span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          isWithinEnrollmentWindow(new Date().toISOString().split('T')[0])
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {isWithinEnrollmentWindow(new Date().toISOString().split('T')[0]) ? 'Open' : 'Closed'}
-                        </span>
-                      </div>
-                      <p className="text-blue-600 mt-1">Applied to all dates</p>
-                    </div>
-                  ) : (
-                    systemConfig.eventDates.map(date => {
-                      const enrollmentTime = systemConfig.enrollmentTimes[date]
-                      const isOpen = isWithinEnrollmentWindow(date)
-                      
-                      if (!enrollmentTime || !enrollmentTime.startTime || !enrollmentTime.endTime) {
-                        return null
-                      }
-                      
-                      return (
-                        <div key={date} className="flex items-center justify-between">
-                          <span>{new Date(date).toLocaleDateString('en-US', { 
-                            weekday: 'short', 
-                            month: 'short', 
-                            day: 'numeric' 
-                          })}:</span>
-                          <div className="flex items-center">
-                            <span className="mr-2">
-                              {enrollmentTime.startTime} - {enrollmentTime.endTime}
-                            </span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              isOpen 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {isOpen ? 'Open' : 'Closed'}
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
-              </div>
-            ) : null}
             {userHasBooking ? (
               <div className="bg-blue-100 border border-blue-300 rounded-lg p-4 mb-4">
                 <p className="text-blue-800 font-medium">You already have a booking!</p>

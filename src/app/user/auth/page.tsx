@@ -8,7 +8,6 @@ import { supabase } from '@/lib/supabase'
 import Modal from '@/components/Modal'
 
 export default function UserAuth() {
-  const [isSignUp, setIsSignUp] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -17,13 +16,8 @@ export default function UserAuth() {
   const router = useRouter()
   
   const [formData, setFormData] = useState({
-    name: '',
-    rollNo: '',
-    department: '',
-    email: '',
-    year: '',
-    password: '',
-    confirmPassword: ''
+    roll_no: '',
+    password: ''
   })
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -37,141 +31,37 @@ export default function UserAuth() {
     e.preventDefault()
     setIsLoading(true)
     
-    // Debug: Check Supabase configuration
-    console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-    console.log('Supabase Anon Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-    
     try {
-      if (isSignUp) {
-        if (formData.password !== formData.confirmPassword) {
-          setErrorMessage('Passwords do not match!')
-          setShowErrorModal(true)
-          setIsLoading(false)
-          return
-        }
+      // Handle sign in logic
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('roll_no', formData.roll_no)
+        .single()
 
-        // Create user directly in database (simplified approach)
-        // Try with password field first
-        let { data: userData, error: profileError } = await supabase
-          .from('users')
-          .insert({
-            name: formData.name,
-            roll_no: formData.rollNo,
-            department: formData.department,
-            email: formData.email,
-            year: parseInt(formData.year),
-            password: formData.password
-          })
-          .select()
-          .single()
-
-        // If that fails, try without password field
-        if (profileError) {
-          const { data: retryData, error: retryError } = await supabase
-            .from('users')
-            .insert({
-              name: formData.name,
-              roll_no: formData.rollNo,
-              department: formData.department,
-              email: formData.email,
-              year: parseInt(formData.year)
-            })
-            .select()
-            .single()
-          
-          if (retryError) {
-            profileError = retryError
-          } else {
-            profileError = null
-            userData = retryData
-          }
-        }
-
-        if (profileError) {
-          // Handle specific database errors with user-friendly messages
-          let errorMessage = 'Failed to create account. Please try again.'
-          
-          // Check if it's a duplicate key error
-          if (profileError.code === '23505' || 
-              (profileError.message && profileError.message.includes('duplicate key')) ||
-              (profileError.message && profileError.message.includes('unique constraint'))) {
-            
-            if (profileError.message && profileError.message.includes('roll_no')) {
-              errorMessage = 'This roll number is already registered. Please use a different roll number or sign in instead.'
-            } else if (profileError.message && profileError.message.includes('email')) {
-              errorMessage = 'This email is already registered. Please use a different email or sign in instead.'
-            } else {
-              errorMessage = 'This information is already in use. Please check your details and try again.'
-            }
-          } else if (profileError.code === '23502' || 
-                     (profileError.message && profileError.message.includes('null value'))) {
-            errorMessage = 'Please fill in all required fields.'
-          } else if (profileError.message) {
-            // Check for common error patterns in the message
-            if (profileError.message.includes('roll_no') || profileError.message.includes('roll number')) {
-              errorMessage = 'This roll number is already registered. Please use a different roll number or sign in instead.'
-            } else if (profileError.message.includes('email')) {
-              errorMessage = 'This email is already registered. Please use a different email or sign in instead.'
-            } else {
-              errorMessage = 'Failed to create account. Please check your details and try again.'
-            }
-          } else {
-            // Fallback for empty error objects - check if it's likely a duplicate
-            errorMessage = 'This information may already be in use. Please check your details or try signing in instead.'
-          }
-          
-          setErrorMessage(errorMessage)
-          setShowErrorModal(true)
-        } else {
-          // Store user in localStorage for session management
-          localStorage.setItem('user', JSON.stringify(userData))
-          setIsSuccess(true)
-          setTimeout(() => {
-            setShowSuccessModal(true)
-          }, 500) // Small delay for better UX
-        }
-      } else {
-        // Handle sign in logic (simplified approach)
-        // First, try to find user by email
-        const { data: user, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', formData.email)
-          .single()
-
-        if (userError) {
-          setErrorMessage('No account found with this email. Please create an account first.')
-          setShowErrorModal(true)
-          return
-        }
-
-        if (!user) {
-          setErrorMessage('No account found with this email. Please create an account first.')
-          setShowErrorModal(true)
-          return
-        }
-
-        // Check if password field exists and matches
-        if (user.password && user.password !== formData.password) {
-          setErrorMessage('Invalid password. Please try again.')
-          setShowErrorModal(true)
-          return
-        }
-
-        // If no password field, accept any password (for demo purposes)
-        if (!user.password) {
-          // No password field found, accepting any password for demo
-        }
-
-        // Store user in localStorage for session management
-        localStorage.setItem('user', JSON.stringify(user))
-        
-        // Show success message
-        setIsSuccess(true)
-        setTimeout(() => {
-          setShowSuccessModal(true)
-        }, 500) // Small delay for better UX
+      if (userError || !user) {
+        setErrorMessage('No account found with this roll number. Please contact admin to create your account.')
+        setShowErrorModal(true)
+        setIsLoading(false)
+        return
       }
+
+      // Check password
+      if (user.password && user.password !== formData.password) {
+        setErrorMessage('Invalid password. Please try again.')
+        setShowErrorModal(true)
+        setIsLoading(false)
+        return
+      }
+
+      // Store user in localStorage for session management
+      localStorage.setItem('user', JSON.stringify(user))
+      
+      // Show success message
+      setIsSuccess(true)
+      setTimeout(() => {
+        setShowSuccessModal(true)
+      }, 500)
     } catch (error) {
       setErrorMessage('An unexpected error occurred. Please try again.')
       setShowErrorModal(true)
@@ -217,209 +107,63 @@ export default function UserAuth() {
               />
             </div>
           </Link>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
-            {isSignUp ? 'Create Account' : 'Welcome Back'}
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-3">
+            Welcome Back
           </h1>
-          <p className="text-gray-600 text-lg font-medium">
-            {isSignUp ? 'Join the IRP Booking System' : 'Sign in to continue'}
+          <p className="text-gray-600 text-base sm:text-lg font-medium">
+            Sign in to access the IRP Booking System
           </p>
           
-          {/* Status Messages */}
-          {isSignUp && (
-            <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200/50 rounded-2xl backdrop-blur-sm">
-              <div className="flex items-center justify-center">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-                <p className="text-sm text-green-700 font-medium">
-                  <strong>Already have an account?</strong> Try signing in instead.
-                </p>
-              </div>
+          {/* Info Message */}
+          <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200/50 rounded-2xl backdrop-blur-sm">
+            <div className="flex items-center justify-center">
+              <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+              <p className="text-sm text-blue-700 font-medium">
+                <strong>Need an account?</strong> Contact admin to create your account.
+              </p>
             </div>
-          )}
-          {!isSignUp && (
-            <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200/50 rounded-2xl backdrop-blur-sm">
-              <div className="flex items-center justify-center">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                <p className="text-sm text-blue-700 font-medium">
-                  <strong>First time?</strong> Create an account to get started.
-                </p>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Auth Card */}
-        <div className="bg-white/80 backdrop-blur-lg border border-white/20 rounded-3xl p-8 shadow-2xl">
+        <div className="bg-white/80 backdrop-blur-lg border border-white/20 rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-2xl">
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {isSignUp && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-bold text-gray-700 flex items-center">
-                      <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
-                      placeholder="Enter your full name"
-                    />
-                  </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-gray-700 flex items-center">
+                <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Roll Number *
+              </label>
+              <input
+                type="text"
+                name="roll_no"
+                value={formData.roll_no}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium text-sm sm:text-base"
+                placeholder="Enter your roll number"
+              />
+            </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-bold text-gray-700 flex items-center">
-                      <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                      </svg>
-                      Roll Number *
-                    </label>
-                    <input
-                      type="text"
-                      name="rollNo"
-                      value={formData.rollNo}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
-                      placeholder="Enter your roll number"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-bold text-gray-700 flex items-center">
-                      <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                      Department *
-                    </label>
-                    <select
-                      name="department"
-                      value={formData.department}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
-                    >
-                      <option value="">Select Department</option>
-                      <option value="CSE">CSE</option>
-                      <option value="IT">IT</option>
-                      <option value="ECE">ECE</option>
-                      <option value="EEE">EEE</option>
-                      <option value="MECH">Mechanical</option>
-                      <option value="CYBER">CSE CY</option>
-                      <option value="AIDS">AIDS</option>
-                      <option value="IOT">CSE IOT</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-sm font-bold text-gray-700 flex items-center">
-                      <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Year *
-                    </label>
-                    <select
-                      name="year"
-                      value={formData.year}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
-                    >
-                      <option value="">Select Year</option>
-                      <option value="1">1st Year</option>
-                      <option value="2">2nd Year</option>
-                      <option value="3">3rd Year</option>
-                      <option value="4">4th Year</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-bold text-gray-700 flex items-center">
-                    <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                    </svg>
-                    Email Address *
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
-                    placeholder="Enter your email address"
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-6">
-              {!isSignUp && (
-                <div className="space-y-2">
-                  <label className="block text-sm font-bold text-gray-700 flex items-center">
-                    <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                    </svg>
-                    Email Address *
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
-                    placeholder="Enter your email address"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <label className="block text-sm font-bold text-gray-700 flex items-center">
-                  <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  Password *
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
-                  placeholder={isSignUp ? 'Create a strong password' : 'Enter your password'}
-                />
-              </div>
-
-              {isSignUp && (
-                <div className="space-y-2">
-                  <label className="block text-sm font-bold text-gray-700 flex items-center">
-                    <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Confirm Password *
-                  </label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium"
-                    placeholder="Confirm your password"
-                  />
-                </div>
-              )}
+            <div className="space-y-2">
+              <label className="block text-sm font-bold text-gray-700 flex items-center">
+                <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                Password *
+              </label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                required
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 text-gray-900 font-medium text-sm sm:text-base"
+                placeholder="Enter your password"
+              />
             </div>
 
             <button
@@ -434,18 +178,18 @@ export default function UserAuth() {
               {isLoading ? (
                 <>
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
-                  {isSignUp ? 'Creating Account...' : 'Signing In...'}
+                  Signing In...
                 </>
               ) : isSuccess ? (
                 <>
                   <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  {isSignUp ? 'Account Created!' : 'Signed In!'}
+                  Signed In!
                 </>
               ) : (
                 <>
-                  {isSignUp ? 'Create Account' : 'Sign In'}
+                  Sign In
                   <svg className="ml-3 w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
@@ -454,32 +198,6 @@ export default function UserAuth() {
             </button>
           </form>
 
-          {/* Toggle between Sign In and Sign Up */}
-          <div className="mt-8 text-center">
-            <div className="bg-gray-50 rounded-2xl p-6">
-              <p className="text-gray-600 text-sm font-medium mb-3">
-                {isSignUp ? 'Already have an account?' : "Don't have an account?"}
-              </p>
-              <button
-                onClick={() => {
-                  setIsSignUp(!isSignUp)
-                  setFormData({
-                    name: '',
-                    rollNo: '',
-                    department: '',
-                    email: '',
-                    year: '',
-                    password: '',
-                    confirmPassword: ''
-                  })
-                  setErrorMessage('')
-                }}
-                className="bg-white text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-300 transform hover:scale-105 shadow-md border border-blue-200"
-              >
-                {isSignUp ? 'Sign In Instead' : 'Create Account Instead'}
-              </button>
-            </div>
-          </div>
 
           {/* Back to home */}
           <div className="mt-6 text-center">
@@ -510,13 +228,10 @@ export default function UserAuth() {
           
           {/* Success Message */}
           <h3 className="text-2xl font-bold text-gray-900 mb-3">
-            {isSignUp ? 'Welcome to IRP!' : 'Welcome Back!'}
+            Welcome Back!
           </h3>
           <p className="text-gray-600 mb-8 text-lg">
-            {isSignUp 
-              ? 'Your account has been created successfully! Click the button below to access the booking system.' 
-              : 'You\'re all set! Click the button below to access the booking system.'
-            }
+            You're all set! Click the button below to access the booking system.
           </p>
           
           {/* Action Buttons */}
