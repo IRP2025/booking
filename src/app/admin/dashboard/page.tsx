@@ -1038,8 +1038,14 @@ export default function AdminDashboard() {
                           dateSpecificSlots: {
                             ...systemConfig.dateSpecificSlots,
                             [dateString]: defaultSlots
+                          },
+                          enrollmentTimes: {
+                            ...systemConfig.enrollmentTimes,
+                            [dateString]: { startTime: '16:00', endTime: '18:00' }
                           }
                         })
+                        
+                        // Don't auto-expand the new date - let user click to expand
                       }}
                       className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 shadow-lg text-sm sm:text-base w-full sm:w-auto"
                     >
@@ -1068,12 +1074,15 @@ export default function AdminDashboard() {
                             const dateToRemove = systemConfig.eventDates[index]
                             const newDates = systemConfig.eventDates.filter((_, i) => i !== index)
                             const newDateSpecificSlots = { ...systemConfig.dateSpecificSlots }
+                            const newEnrollmentTimes = { ...systemConfig.enrollmentTimes }
                             delete newDateSpecificSlots[dateToRemove]
+                            delete newEnrollmentTimes[dateToRemove]
                             
                             setSystemConfig({
                               ...systemConfig, 
                               eventDates: newDates,
-                              dateSpecificSlots: newDateSpecificSlots
+                              dateSpecificSlots: newDateSpecificSlots,
+                              enrollmentTimes: newEnrollmentTimes
                             })
                           }}
                           className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 transform hover:scale-105 flex-shrink-0 text-sm"
@@ -1249,6 +1258,171 @@ export default function AdminDashboard() {
                     >
                       📕 Collapse All
                     </button>
+                  </div>
+                </div>
+
+                {/* Enrollment Time Windows */}
+                <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-2xl p-4 sm:p-6">
+                  <div className="flex items-center mb-6">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center mr-3">
+                      <span className="text-lg sm:text-xl">🕐</span>
+                    </div>
+                    <h4 className="text-lg sm:text-xl font-bold text-gray-900">Enrollment Time Windows</h4>
+                  </div>
+                  
+                  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>💡 How it works:</strong> Set specific time windows when users can book slots for each date. 
+                      For example, allow booking only from 4:00 PM to 6:00 PM on October 6th.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {systemConfig.eventDates.map((date, index) => {
+                      const enrollmentTime = systemConfig.enrollmentTimes[date] || { startTime: '16:00', endTime: '18:00' }
+                      
+                      return (
+                        <div key={date} className="bg-white rounded-xl p-4 border border-teal-200">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center mr-3">
+                                <span className="text-white text-sm">📅</span>
+                              </div>
+                              <div>
+                                <h5 className="font-semibold text-gray-800 text-sm">
+                                  {new Date(date).toLocaleDateString('en-US', { 
+                                    weekday: 'short', 
+                                    month: 'short', 
+                                    day: 'numeric' 
+                                  })}
+                                </h5>
+                                <p className="text-xs text-gray-500">
+                                  {enrollmentTime.startTime ? 
+                                    `${enrollmentTime.startTime} - ${enrollmentTime.endTime}` : 
+                                    'No enrollment window set'
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Start Time</label>
+                              <input
+                                type="time"
+                                value={enrollmentTime.startTime}
+                                onChange={(e) => {
+                                  setSystemConfig({
+                                    ...systemConfig,
+                                    enrollmentTimes: {
+                                      ...systemConfig.enrollmentTimes,
+                                      [date]: {
+                                        ...enrollmentTime,
+                                        startTime: e.target.value
+                                      }
+                                    }
+                                  })
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">End Time</label>
+                              <input
+                                type="time"
+                                value={enrollmentTime.endTime}
+                                onChange={(e) => {
+                                  setSystemConfig({
+                                    ...systemConfig,
+                                    enrollmentTimes: {
+                                      ...systemConfig.enrollmentTimes,
+                                      [date]: {
+                                        ...enrollmentTime,
+                                        endTime: e.target.value
+                                      }
+                                    }
+                                  })
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="mt-3 flex gap-2">
+                            <button
+                              onClick={() => {
+                                setSystemConfig({
+                                  ...systemConfig,
+                                  enrollmentTimes: {
+                                    ...systemConfig.enrollmentTimes,
+                                    [date]: { startTime: '', endTime: '' }
+                                  }
+                                })
+                              }}
+                              className="text-xs text-red-600 hover:text-red-800 font-medium"
+                            >
+                              Clear Times
+                            </button>
+                            <span className="text-xs text-gray-400">|</span>
+                            <span className="text-xs text-gray-500">
+                              Empty = Always available
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  
+                  <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <h5 className="font-medium text-gray-800 mb-2 text-sm">📋 Quick Setup Options:</h5>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          const newEnrollmentTimes = { ...systemConfig.enrollmentTimes }
+                          systemConfig.eventDates.forEach(date => {
+                            newEnrollmentTimes[date] = { startTime: '16:00', endTime: '18:00' }
+                          })
+                          setSystemConfig({
+                            ...systemConfig,
+                            enrollmentTimes: newEnrollmentTimes
+                          })
+                        }}
+                        className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 rounded text-xs font-medium"
+                      >
+                        4:00-6:00 PM All Days
+                      </button>
+                      <button
+                        onClick={() => {
+                          const newEnrollmentTimes = { ...systemConfig.enrollmentTimes }
+                          systemConfig.eventDates.forEach(date => {
+                            newEnrollmentTimes[date] = { startTime: '09:00', endTime: '12:00' }
+                          })
+                          setSystemConfig({
+                            ...systemConfig,
+                            enrollmentTimes: newEnrollmentTimes
+                          })
+                        }}
+                        className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 rounded text-xs font-medium"
+                      >
+                        9:00-12:00 AM All Days
+                      </button>
+                      <button
+                        onClick={() => {
+                          const newEnrollmentTimes = { ...systemConfig.enrollmentTimes }
+                          systemConfig.eventDates.forEach(date => {
+                            newEnrollmentTimes[date] = { startTime: '', endTime: '' }
+                          })
+                          setSystemConfig({
+                            ...systemConfig,
+                            enrollmentTimes: newEnrollmentTimes
+                          })
+                        }}
+                        className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-xs font-medium"
+                      >
+                        Always Available
+                      </button>
+                    </div>
                   </div>
                 </div>
 

@@ -179,6 +179,26 @@ export default function BookingPage() {
     }
   }, [systemConfig])
 
+  // Check if current time is within enrollment window for a specific date
+  const isWithinEnrollmentWindow = (date: string) => {
+    const enrollmentTime = systemConfig.enrollmentTimes[date]
+    if (!enrollmentTime || !enrollmentTime.startTime || !enrollmentTime.endTime) {
+      return true // Always available if no enrollment window set
+    }
+    
+    const now = new Date()
+    const today = now.toISOString().split('T')[0]
+    
+    // If it's not the enrollment date, check if it's before the date
+    if (date !== today) {
+      return new Date(date) > now
+    }
+    
+    // If it's the enrollment date, check the time window
+    const currentTime = now.toTimeString().slice(0, 5) // HH:MM format
+    return currentTime >= enrollmentTime.startTime && currentTime <= enrollmentTime.endTime
+  }
+
   // Fetch real booking data from Supabase
   const fetchSlots = async () => {
     try {
@@ -230,6 +250,8 @@ export default function BookingPage() {
       const allSlots: BookingSlot[] = []
       dates.forEach(date => {
         const times = systemConfig.dateSpecificSlots[date] || []
+        const isEnrollmentOpen = isWithinEnrollmentWindow(date)
+        
         times.forEach(time => {
           const slotId = `${date}-${time.id}`
           const key = `${date}-${time.time}`
@@ -239,7 +261,7 @@ export default function BookingPage() {
             id: slotId,
             date,
             time: time.time,
-            isAvailable: !bookingInfo,
+            isAvailable: !bookingInfo && isEnrollmentOpen,
             bookedBy: bookingInfo?.bookedBy,
             projectName: bookingInfo?.projectName
           })
@@ -1055,7 +1077,49 @@ export default function BookingPage() {
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Available Review Slots</h2>
             <h3 className="text-xl font-semibold text-gray-700 mb-2">{systemConfig.eventTitle}</h3>
             <p className="text-lg text-gray-600 mb-2">{systemConfig.eventSubtitle}</p>
-            <p className="text-sm text-gray-500 max-w-2xl mx-auto">{systemConfig.eventDescription}</p>
+            <p className="text-sm text-gray-500 max-w-2xl mx-auto mb-4">{systemConfig.eventDescription}</p>
+            
+            {/* Enrollment Time Windows Info */}
+            {systemConfig.enrollmentTimes && Object.keys(systemConfig.enrollmentTimes).length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 max-w-2xl mx-auto">
+                <div className="flex items-center justify-center mb-2">
+                  <span className="text-blue-600 mr-2">🕐</span>
+                  <h4 className="text-sm font-semibold text-blue-800">Enrollment Windows</h4>
+                </div>
+                <div className="text-xs text-blue-700 space-y-1">
+                  {systemConfig.eventDates.map(date => {
+                    const enrollmentTime = systemConfig.enrollmentTimes[date]
+                    const isOpen = isWithinEnrollmentWindow(date)
+                    
+                    if (!enrollmentTime || !enrollmentTime.startTime || !enrollmentTime.endTime) {
+                      return null
+                    }
+                    
+                    return (
+                      <div key={date} className="flex items-center justify-between">
+                        <span>{new Date(date).toLocaleDateString('en-US', { 
+                          weekday: 'short', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}:</span>
+                        <div className="flex items-center">
+                          <span className="mr-2">
+                            {enrollmentTime.startTime} - {enrollmentTime.endTime}
+                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            isOpen 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {isOpen ? 'Open' : 'Closed'}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
             {userHasBooking ? (
               <div className="bg-blue-100 border border-blue-300 rounded-lg p-4 mb-4">
                 <p className="text-blue-800 font-medium">You already have a booking!</p>
