@@ -258,9 +258,16 @@ export default function BookingPage() {
       if (booking && !error) {
         setUserHasBooking(true)
         setExistingBooking(booking as Booking)
+      } else {
+        // No booking found or error - reset the state
+        setUserHasBooking(false)
+        setExistingBooking(null)
       }
     } catch (error) {
       console.error('Error checking user booking:', error)
+      // Reset state on error as well
+      setUserHasBooking(false)
+      setExistingBooking(null)
     }
   }
 
@@ -286,6 +293,8 @@ export default function BookingPage() {
         () => {
           // Refetch slots when bookings change
           fetchSlots()
+          // Also refresh user booking status
+          checkUserBooking()
         }
       )
       .on(
@@ -322,9 +331,12 @@ export default function BookingPage() {
   }, [user])
 
   // Force immediate status check when user interacts with slots
-  const handleSlotClick = (slot: BookingSlot) => {
+  const handleSlotClick = async (slot: BookingSlot) => {
     // Force immediate system status check
     loadSystemStatus()
+    
+    // Refresh user booking status in case it was recently removed
+    await checkUserBooking()
     
     // Check if system is active first
     if (!systemActive) {
