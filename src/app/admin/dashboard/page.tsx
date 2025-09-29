@@ -1233,7 +1233,7 @@ export default function AdminDashboard() {
                     <button
                       onClick={() => {
                         // Expand all dates
-                        const allExpanded = {}
+                        const allExpanded: { [date: string]: boolean } = {}
                         systemConfig.eventDates.forEach(date => {
                           allExpanded[date] = true
                         })
